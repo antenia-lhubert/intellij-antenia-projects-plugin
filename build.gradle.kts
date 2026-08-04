@@ -17,6 +17,10 @@ dependencies {
 
         // Add plugin dependencies for compilation here:
         bundledPlugin("com.intellij.java")
+        bundledPlugin("org.jetbrains.idea.maven")
+        bundledPlugin("com.intellij.javaee")
+        bundledPlugin("Tomcat")
+        bundledPlugin("JavaScript")
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.plugins.yaml")
         bundledPlugin("com.intellij.properties")

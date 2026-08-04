@@ -5,21 +5,24 @@
 
     <!-- Public plugin name should be written in Title Case.
      Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
-    <name>Antenia-projects</name>
+    <name>Antenia Projects</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor>Antenia</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        Configures, runs, and manages local configuration for Antenia Neo projects.
         ]]></description>
 
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.java</depends>
+    <depends>org.jetbrains.idea.maven</depends>
+    <depends>com.intellij.javaee</depends>
+    <depends>Tomcat</depends>
+    <depends>JavaScript</depends>
     <depends>org.intellij.plugins.markdown</depends>
     <depends>com.intellij.modules.xml</depends>
     <depends>com.intellij.database</depends>
@@ -32,8 +35,12 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MyToolWindow" factoryClass="fr.antenia.MyToolWindowFactory"
+        <toolWindow id="Neo Configuration" factoryClass="fr.antenia.ui.ConfigurationToolWindowFactory" anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+        <applicationConfigurable parentId="tools" instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
+                                 id="fr.antenia.globalDatabase" displayName="Antenia Projects"/>
+        <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>
+        <runConfigurationExtension implementation="fr.antenia.run.NeoEnvironmentExtension"/>
     </extensions>
 
 </idea-plugin>

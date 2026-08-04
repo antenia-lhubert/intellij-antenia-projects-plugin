@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" threshold="all" debug="true">
+    <logger name="com.mchange" additivity="false"><level value="WARN"/><appender-ref ref="c3p0failed"/></logger>
+    <appender name="c3p0failed" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="file" value="${dirNovanet}/logs/novanet/c3p0/CONNECTIONS_FAILED"/>
+        <param name="DatePattern" value="'_'yyyy-MM-dd'.LOG'"/>
+        <layout class="org.apache.log4j.PatternLayout"><param name="ConversionPattern" value="[NOVA] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n"/></layout>
+    </appender>
+    <logger name="batch."><level value="ALL"/><appender-ref ref="traceBatch"/></logger>
+    <logger name="com.leaderinfo.novanet.batch"><level value="ALL"/><appender-ref ref="traceBatch"/></logger>
+    <logger name="com.leaderinfo.novanet."><level value="ALL"/><appender-ref ref="traceBatch"/></logger>
+    <logger name="org.hibernate.orm.deprecation" additivity="false" level="WARN"/>
+    <appender name="traceBatch" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="file" value="${dirNovanet}/logs/novanet/batch/TRACES_BATCH"/><param name="DatePattern" value="'_'yyyy-MM-dd-HH'.LOG'"/>
+        <layout class="org.apache.log4j.PatternLayout"><param name="ConversionPattern" value="[NOVA] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n"/></layout>
+    </appender>
+    <root><level value="INFO"/><appender-ref ref="stdout"/><appender-ref ref="logsNovanet"/></root>
+    <appender name="stdout" class="org.apache.log4j.ConsoleAppender"><layout class="org.apache.log4j.PatternLayout"><param name="ConversionPattern" value="[NOVA] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n"/></layout></appender>
+    <appender name="logsNovanet" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="file" value="${dirNovanet}/logs/novanet/novanet/NOVANET_WARN"/><param name="DatePattern" value="'_'yyyy-MM-dd'.LOG'"/>
+        <layout class="org.apache.log4j.PatternLayout"><param name="ConversionPattern" value="[NOVA] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n"/></layout>
+    </appender>
+</log4j:configuration>

@@ -1,0 +1,69 @@
+package fr.antenia.config
+
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
+import fr.antenia.project.NeoProjectType
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
+object ConfigurationFiles {
+    fun propertyPath(project: Project, type: NeoProjectType): Path =
+        ProjectConfigurationState.getInstance(project).root(project).resolve(type.directoryName).resolve(type.configurationFile)
+
+    fun ensureCreated(project: Project, type: NeoProjectType): Path {
+        val root = ProjectConfigurationState.getInstance(project).root(project)
+        val directory = root.resolve(type.directoryName)
+        Files.createDirectories(directory)
+        copyTemplateIfMissing("/templates/${type.configurationFile}", directory.resolve(type.configurationFile))
+        when (type) {
+            NeoProjectType.CORE -> copyTemplateIfMissing("/templates/novaLog.xml", directory.resolve("novaLog.xml"))
+            NeoProjectType.GED -> copyTemplateIfMissing("/templates/gedLog.xml", directory.resolve("gedLog.xml"))
+            NeoProjectType.SELFCARE -> Unit
+        }
+        LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)
+        return directory.resolve(type.configurationFile)
+    }
+
+    fun read(path: Path): OrderedProperties = OrderedPropertiesCodec.parse(Files.readString(path))
+
+    fun write(project: Project, path: Path, document: OrderedProperties) {
+        val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)
+        if (virtualFile == null) {
+            Files.writeString(path, OrderedPropertiesCodec.render(document))
+            return
+        }
+        val fileDocument = ReadAction.compute<Document?, RuntimeException> {
+            FileDocumentManager.getInstance().getDocument(virtualFile)
+        } ?: return
+        WriteCommandAction.runWriteCommandAction(project, "Update Neo configuration", null, Runnable {
+            fileDocument.setText(renderForEditor(document))
+            FileDocumentManager.getInstance().saveDocument(fileDocument)
+        })
+    }
+
+    fun reset(project: Project, type: NeoProjectType): Path {
+        val path = propertyPath(project, type)
+        Files.createDirectories(path.parent)
+        javaClass.getResourceAsStream("/templates/${type.configurationFile}")!!.use { input ->
+            Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
+        }
+        ApplicationManager.getApplication().invokeLater {
+            LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)?.refresh(false, false)
+        }
+        return path
+    }
+
+    private fun copyTemplateIfMissing(resource: String, destination: Path) {
+        if (Files.exists(destination)) return
+        javaClass.getResourceAsStream(resource)!!.use { Files.copy(it, destination) }
+    }
+}
+
+internal fun renderForEditor(document: OrderedProperties): String =
+    OrderedPropertiesCodec.render(document).replace("\r\n", "\n").replace('\r', '\n')

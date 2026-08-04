@@ -20,6 +20,8 @@ Configuration UI should be a tool window.
 
 User should be able to configure global database credentials that are safely stored and usable across projects.
 (global configuration should be done in a separate UI in `Settings > Tools`)
+Global database credentials should contain only a username and password; connection details remain project-specific.
+Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
 
 DB Credentials form should have:
 - host (should be a select to chose amongst known servers + a free input so that user can put in an unknown host)

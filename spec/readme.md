@@ -13,3 +13,5 @@ what the plugin should be always is described in the spec folder that is the onl
 Make sure it always respects it.
 
 Avoid `hacks` and prefer using official APIs.
+
+Configuration files should be placed in a `.local/` folder at project root.
