@@ -45,6 +45,8 @@
     </extensions>
 
     <applicationListeners>
+        <listener class="fr.antenia.automation.JdkApplicationListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
         <listener class="fr.antenia.automation.TomcatApplicationListener"
                   topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>

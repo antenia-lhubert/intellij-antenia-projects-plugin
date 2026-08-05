@@ -17,12 +17,15 @@ import fr.antenia.database.DatabaseProfileSynchronizer
 import fr.antenia.notifications.AnteniaNotifications
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoProjectDetector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.idea.maven.project.MavenProjectsManager
 
 class NeoProjectActivity : ProjectActivity {
     private val logger = Logger.getInstance(NeoProjectActivity::class.java)
 
     override suspend fun execute(project: Project) {
+        withContext(Dispatchers.IO) { JdkAutoConfigurator.configure() }
         logger.info("Installing Neo project automation for '${project.name}'")
         MavenProjectsManager.getInstance(project).addManagerListener(object : MavenProjectsManager.Listener {
             override fun projectImportCompleted() = scheduleConfiguration(project, "Maven import completed")
@@ -96,7 +99,10 @@ class NeoProjectActivity : ProjectActivity {
         .asSequence()
         .filter { it.sdkType is JavaSdk }
         .filter { sdkMajor(it) == javaVersion }
-        .sortedWith(compareByDescending<Sdk> { isTemurin(it) }.thenByDescending { sdkMajor(it) })
+        .sortedWith { first, second ->
+            val vendorComparison = isTemurin(second).compareTo(isTemurin(first))
+            if (vendorComparison != 0) vendorComparison else compareVersions(sdkVersionNumbers(second), sdkVersionNumbers(first))
+        }
         .firstOrNull()
 
     private fun sdkMajor(sdk: Sdk): Int = Regex("(?:1\\.)?(\\d+)").find(sdk.versionString.orEmpty())?.groupValues?.get(1)?.toIntOrNull() ?: 0
@@ -104,5 +110,17 @@ class NeoProjectActivity : ProjectActivity {
     private fun isTemurin(sdk: Sdk): Boolean {
         val description = "${sdk.name} ${sdk.versionString}".lowercase()
         return "temurin" in description || "adoptium" in description
+    }
+
+    private fun sdkVersionNumbers(sdk: Sdk): List<Int> = Regex("\\d+").findAll(sdk.versionString.orEmpty())
+        .map { it.value.toInt() }
+        .toList()
+
+    private fun compareVersions(first: List<Int>, second: List<Int>): Int {
+        for (index in 0 until maxOf(first.size, second.size)) {
+            val comparison = first.getOrElse(index) { 0 }.compareTo(second.getOrElse(index) { 0 })
+            if (comparison != 0) return comparison
+        }
+        return 0
     }
 }

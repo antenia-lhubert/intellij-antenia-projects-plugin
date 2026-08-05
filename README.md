@@ -65,7 +65,9 @@ The database host, port, and database name are always project-specific. The port
 
 ### Run Configuration
 
-At application startup, the plugin discovers Tomcat installations directly below `C:\tools` and through `mise`, then adds missing installations to IntelliJ's global application servers. Mise-managed servers use names such as `Tomcat 10.1.57 - mise`. The plugin creates a `webapp` local Tomcat configuration after the Maven project and exploded WAR artifact are available, chooses the highest compatible Tomcat version, deploys the project artifact at the expected context, and opens the HTTPS application URL after launch.
+At application startup, the plugin discovers JDK installations under `%PROGRAMFILES%\Java`, the system and user-local Eclipse Adoptium directories, and through `mise`, then adds missing installations to IntelliJ before assigning a project SDK. Mise-managed JDKs use names such as `temurin-25 (mise)`.
+
+The plugin also discovers Tomcat installations directly below `C:\tools` and through `mise`, then adds missing installations to IntelliJ's global application servers. Mise-managed servers use names such as `Tomcat 10.1.57 (mise)`. The plugin creates a `webapp` local Tomcat configuration after the Maven project and exploded WAR artifact are available, chooses the highest compatible Tomcat version, deploys the project artifact at the expected context, and opens the HTTPS application URL after launch.
 
 For Neo Core projects with a `novanet-react` package, the plugin also creates:
 

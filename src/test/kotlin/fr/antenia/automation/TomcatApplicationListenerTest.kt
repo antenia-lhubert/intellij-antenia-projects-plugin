@@ -55,7 +55,7 @@ class TomcatApplicationListenerTest {
         val home = Path.of("C:\\Users\\developer\\AppData\\Local\\mise\\installs\\tomcat\\10.1.57\\apache-tomcat-10.1.57")
 
         assertEquals(
-            "Tomcat 10.1.57 - mise",
+            "Tomcat 10.1.57 (mise)",
             TomcatApplicationListener.serverName("10.1.57", home, emptySet()),
         )
     }

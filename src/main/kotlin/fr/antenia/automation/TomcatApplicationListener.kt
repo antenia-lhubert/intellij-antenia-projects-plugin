@@ -162,7 +162,7 @@ class TomcatApplicationListener : AppLifecycleListener {
             val defaultName = "Tomcat $version"
             val normalizedHome = home.toAbsolutePath().normalize().toString().lowercase()
             if ("\\mise\\installs\\tomcat\\" in normalizedHome) {
-                val miseName = "$defaultName - mise"
+                val miseName = "$defaultName (mise)"
                 if (miseName !in existingNames) return miseName
                 return generateSequence(2) { it + 1 }
                     .map { "$miseName ($it)" }

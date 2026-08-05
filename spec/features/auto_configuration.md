@@ -8,6 +8,16 @@ Detection and automatic configuration failures should notify the user and remain
   chose amongst possible java versions in order of preference (temurin, highest version first, then other jdks, highest version first)
 - Compilation shared heap size: 4096
 
+# JDK
+
+As a global configuration, it should find existing jdk installations and add them as configurations in IntelliJ.
+This should happen before project JDK assignation.
+Tomcat installations can be found at:
+- `%PROGRAMFILES%\Java\jdk*`
+- `%PROGRAMFILES%\Eclipse Adoptium\jdk*`
+- `%LOCALAPPDATA%\Programs\Eclipse Adoptium\jdk*`
+- installed with `mise` if `mise` is present. (e.g. `C:\Users\LeopoldHubert\AppData\Local\mise\installs\java\temurin-25.0.3+9.0.LTS`, do not rely on this path format, explore installed java versions and their location with mise directly)
+
 # Tomcat
 
 As a global configuration, it should find existing tomcat server installations and add them as configurations in IntelliJ.
