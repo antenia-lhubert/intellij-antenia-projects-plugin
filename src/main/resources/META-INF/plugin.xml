@@ -37,8 +37,11 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Neo Configuration" factoryClass="fr.antenia.ui.ConfigurationToolWindowFactory" anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowPalette"/>
-        <applicationConfigurable parentId="tools" instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
-                                  id="fr.antenia.globalDatabase" displayName="Antenia Projects"/>
+        <applicationConfigurable parentId="tools" instance="fr.antenia.settings.AnteniaConfigurable"
+                                 id="fr.antenia" displayName="Antenia">
+            <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
+                          id="fr.antenia.globalDatabase" displayName="Projects"/>
+        </applicationConfigurable>
         <notificationGroup id="Antenia Projects" displayType="BALLOON" isLogByDefault="true"/>
         <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>
         <runConfigurationExtension implementation="fr.antenia.run.NeoEnvironmentExtension"/>

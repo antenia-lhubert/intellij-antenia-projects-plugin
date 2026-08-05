@@ -59,7 +59,7 @@ Only the directory for the detected project type is created. Use **Reset** in th
 
 ### Global Database Credentials
 
-Configure a shared database username and password under **Settings > Tools > Antenia Projects**. Secrets are stored through IntelliJ Password Safe and are synchronized to supported projects unless **Override global credentials** is enabled in the project's database form. Disabling an override keeps its project credentials in Password Safe so they are restored if the override is enabled again.
+Configure a shared database username and password under **Settings > Tools > Antenia > Projects**. Secrets are stored through IntelliJ Password Safe and are synchronized to supported projects unless **Override global credentials** is enabled in the project's database form. Disabling an override keeps its project credentials in Password Safe so they are restored if the override is enabled again.
 
 The database host, port, and database name are always project-specific. The port defaults to `3306`.
 
