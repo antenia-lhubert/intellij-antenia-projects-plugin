@@ -65,7 +65,7 @@ The database host, port, and database name are always project-specific. The port
 
 ### Run Configuration
 
-The plugin creates a `webapp` local Tomcat configuration after the Maven project and exploded WAR artifact are available. It chooses a compatible configured Tomcat installation, deploys the project artifact at the expected context, and opens the HTTPS application URL after launch.
+At application startup, the plugin discovers Tomcat installations directly below `C:\tools` and through `mise`, then adds missing installations to IntelliJ's global application servers. Mise-managed servers use names such as `Tomcat 10.1.57 - mise`. The plugin creates a `webapp` local Tomcat configuration after the Maven project and exploded WAR artifact are available, chooses the highest compatible Tomcat version, deploys the project artifact at the expected context, and opens the HTTPS application URL after launch.
 
 For Neo Core projects with a `novanet-react` package, the plugin also creates:
 
@@ -86,7 +86,7 @@ To install a locally built distribution:
 3. Choose **Install Plugin from Disk** and select the ZIP in `build/distributions/`.
 4. Restart the IDE and open a supported Neo project at its Maven root.
 
-Compatible JDK and Tomcat installations must be configured in the IDE for automatic selection.
+Compatible JDK installations must be configured in the IDE for automatic selection. Tomcat installations under `C:\tools` or managed by `mise` are configured automatically.
 
 ## Development
 

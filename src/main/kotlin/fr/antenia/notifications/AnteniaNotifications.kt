@@ -11,10 +11,10 @@ object AnteniaNotifications {
     private const val DEDUPLICATION_WINDOW_MS = 60_000L
     private val lastShown = ConcurrentHashMap<String, Long>()
 
-    fun failure(project: Project, key: String, title: String, message: String) {
-        if (project.isDisposed) return
+    fun failure(project: Project?, key: String, title: String, message: String) {
+        if (project?.isDisposed == true) return
         val now = System.currentTimeMillis()
-        val notificationKey = "${project.locationHash}:$key"
+        val notificationKey = "${project?.locationHash ?: "application"}:$key"
         val previous = lastShown.put(notificationKey, now)
         if (previous != null && now - previous < DEDUPLICATION_WINDOW_MS) return
 

@@ -8,6 +8,13 @@ Detection and automatic configuration failures should notify the user and remain
   chose amongst possible java versions in order of preference (temurin, highest version first, then other jdks, highest version first)
 - Compilation shared heap size: 4096
 
+# Tomcat
+
+As a global configuration, it should find existing tomcat server installations and add them as configurations in IntelliJ.
+Tomcat installations can be found at:
+- `C:\tools` (e.g. `C:\tools\apache-tomcat-10.1.57`)
+- installed with `mise` if `mise` is present. (e.g. `C:\Users\LeopoldHubert\AppData\Local\mise\installs\tomcat\10.1.57\apache-tomcat-10.1.57`, do not rely on this path format, explore installed tomcat versions and their location with mise directly)
+
 # Artifact
 
 All projects should have the auto generated artifact `webapp-{project}:war exploded` present, or it should be regenerated.
