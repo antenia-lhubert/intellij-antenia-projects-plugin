@@ -2,6 +2,16 @@
 
 Antenia Projects is an IntelliJ IDEA Ultimate plugin for configuring and running Antenia Neo Maven web applications. It recognizes supported projects, creates their local configuration, and prepares the IntelliJ SDK, artifact, database, and run configuration needed for development.
 
+## Install and Enable Updates
+
+1. Open **Settings > Plugins** in IntelliJ IDEA Ultimate.
+2. Open the gear menu and choose **Manage Plugin Repositories**.
+3. Add `https://raw.githubusercontent.com/antenia-lhubert/intellij-antenia-projects-plugin/main/updatePlugins.xml`.
+4. Return to the **Marketplace** tab and search for **Antenia Projects**.
+5. Install the plugin and restart IntelliJ IDEA when prompted.
+
+IntelliJ IDEA will use the same repository to discover future plugin updates automatically.
+
 ## Supported Projects
 
 Projects are identified from the root `pom.xml` artifact ID.
@@ -88,12 +98,16 @@ The compound configuration opens the application through `https://localhost:8888
 
 This plugin requires IntelliJ IDEA Ultimate because it uses the Tomcat, Java EE, JavaScript, Maven, and Database integrations bundled with Ultimate.
 
-To install a locally built distribution:
+To install the plugin and receive updates from this repository:
 
-1. Build the plugin with `./gradlew --no-daemon buildPlugin` or `gradlew.bat --no-daemon buildPlugin` on Windows.
-2. Open **Settings > Plugins** in IntelliJ IDEA Ultimate.
-3. Choose **Install Plugin from Disk** and select the ZIP in `build/distributions/`.
+1. Open **Settings > Plugins** in IntelliJ IDEA Ultimate.
+2. Open the gear menu, choose **Manage Plugin Repositories**, and add `https://raw.githubusercontent.com/antenia-lhubert/intellij-antenia-projects-plugin/main/updatePlugins.xml`.
+3. Find and install **Antenia Projects** from the **Marketplace** tab.
 4. Restart the IDE and open a supported Neo project at its Maven root.
+
+The repository feed points directly to a manually uploaded GitHub release ZIP. It does not trigger or perform a build.
+
+To install a locally built distribution instead, choose **Install Plugin from Disk** in the Plugins gear menu and select the ZIP in `build/distributions/`.
 
 Compatible JDK installations must be configured in the IDE for automatic selection. Tomcat installations under `C:\tools` or managed by `mise` are configured automatically.
 
@@ -118,6 +132,16 @@ The project uses Kotlin, Gradle, and the IntelliJ Platform Gradle Plugin. The cu
 On Windows, use `gradlew.bat` instead of `./gradlew`. Always pass `--no-daemon`; `gradle.properties` also disables the daemon as a safeguard.
 
 Shared IntelliJ run configurations are available for the sandbox IDE, tests, and plugin verification.
+
+### Manual Releases
+
+Releases are built and published manually; this repository has no automated release build.
+
+1. Set `version` in `gradle.properties` to the release version without a `-SNAPSHOT` suffix.
+2. Update `updatePlugins.xml` so its `version`, release tag, artifact filename, and `idea-version` match the generated plugin metadata.
+3. Run `./gradlew --no-daemon clean buildPlugin` or `gradlew.bat --no-daemon clean buildPlugin` on Windows.
+4. Commit and push the release metadata to `main`.
+5. Create the GitHub release tagged `v<version>` from that commit and upload `build/distributions/antenia-projects-<version>.zip` without renaming it.
 
 ## Specification
 
