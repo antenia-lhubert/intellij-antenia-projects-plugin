@@ -192,8 +192,9 @@ class ConfigurationPanel(
         model.load(document)
         databaseForm?.load()
         environmentForm?.load()
-        if (selectedRow in 0 until model.rowCount) {
-            table.selectionModel.setSelectionInterval(selectedRow, selectedRow)
+        val rowToSelect = selectedRow.takeIf { it in 0 until model.rowCount } ?: model.databaseRow()
+        if (rowToSelect >= 0) {
+            table.selectionModel.setSelectionInterval(rowToSelect, rowToSelect)
         }
         showSelectedForm()
     }
@@ -485,6 +486,8 @@ private class ConfigurationTableModel(
     }
 
     fun rowAt(row: Int): LogicalRow? = rows.getOrNull(row)
+
+    fun databaseRow(): Int = rows.indexOfFirst { it is LogicalRow.Database }
 
     fun addAfter(selected: Int, line: PropertyLine): Int {
         val insertRow = if (selected in rows.indices) selected + 1 else rows.size
