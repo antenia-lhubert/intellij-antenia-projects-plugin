@@ -2,6 +2,7 @@ package fr.antenia.automation
 
 import com.intellij.compiler.CompilerConfiguration
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.ProjectJdkTable
@@ -13,38 +14,82 @@ import fr.antenia.config.ConfigurationFiles
 import fr.antenia.credentials.GlobalDatabaseCredentialsSynchronizer
 import fr.antenia.credentials.GlobalDatabaseSettings
 import fr.antenia.database.DatabaseProfileSynchronizer
+import fr.antenia.notifications.AnteniaNotifications
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoProjectDetector
 import org.jetbrains.idea.maven.project.MavenProjectsManager
 
 class NeoProjectActivity : ProjectActivity {
+    private val logger = Logger.getInstance(NeoProjectActivity::class.java)
+
     override suspend fun execute(project: Project) {
+        logger.info("Installing Neo project automation for '${project.name}'")
         MavenProjectsManager.getInstance(project).addManagerListener(object : MavenProjectsManager.Listener {
-            override fun projectImportCompleted() = scheduleConfiguration(project)
+            override fun projectImportCompleted() = scheduleConfiguration(project, "Maven import completed")
         }, project)
-        scheduleConfiguration(project)
+        scheduleConfiguration(project, "project opened")
     }
 
-    private fun scheduleConfiguration(project: Project) {
+    private fun scheduleConfiguration(project: Project, reason: String) {
+        logger.info("Scheduling Neo project configuration for '${project.name}': $reason")
         ApplicationManager.getApplication().invokeLater {
-            if (project.isDisposed) return@invokeLater
-            val neoProject = NeoProjectDetector.detect(project) ?: return@invokeLater
-            ToolWindowManager.getInstance(project).getToolWindow("Neo Configuration")?.setAvailable(true)
-            ConfigurationFiles.ensureCreated(project, neoProject.type)
-            GlobalDatabaseCredentialsSynchronizer.update(project, GlobalDatabaseSettings.getInstance().credentials())
-            DatabaseProfileSynchronizer.update(project, neoProject)
-            configureProject(project, neoProject)
-            NeoRunConfigurationManager.configure(project, neoProject)
+            if (project.isDisposed) {
+                logger.info("Neo project configuration cancelled for '${project.name}': project is disposed")
+                return@invokeLater
+            }
+            val neoProject = NeoProjectDetector.detect(project)
+            if (neoProject == null) {
+                logger.info("Neo project configuration skipped for '${project.name}': no supported root artifact detected")
+                return@invokeLater
+            }
+            logger.info(
+                "Detected ${neoProject.type.displayName} project '${project.name}': " +
+                    "artifactId=${neoProject.type.artifactId}, java=${neoProject.javaVersion}, react=${neoProject.hasReact}",
+            )
+            try {
+                ToolWindowManager.getInstance(project).getToolWindow("Neo Configuration")?.setAvailable(true)
+                logger.info("Enabled Neo Configuration tool window for '${project.name}'")
+                ConfigurationFiles.ensureCreated(project, neoProject.type)
+                GlobalDatabaseCredentialsSynchronizer.update(project, GlobalDatabaseSettings.getInstance().credentials())
+                DatabaseProfileSynchronizer.update(project, neoProject)
+                configureProject(project, neoProject)
+                NeoRunConfigurationManager.configure(project, neoProject)
+                logger.info("Completed Neo project configuration for '${project.name}'")
+            } catch (exception: Exception) {
+                logger.error("Neo project configuration failed for '${project.name}'", exception)
+                AnteniaNotifications.failure(
+                    project,
+                    "automatic-configuration",
+                    "Neo automatic configuration failed",
+                    "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                )
+                throw exception
+            }
         }
     }
 
     private fun configureProject(project: Project, neoProject: NeoProject) {
         CompilerConfiguration.getInstance(project).setBuildProcessHeapSize(4096)
-        val sdk = chooseSdk(neoProject.javaVersion) ?: return
-        if (ProjectRootManager.getInstance(project).projectSdk == sdk) return
+        logger.info("Set compiler build process heap to 4096 MB for '${project.name}'")
+        val sdk = chooseSdk(neoProject.javaVersion)
+        if (sdk == null) {
+            logger.warn("No Java ${neoProject.javaVersion} SDK found for '${project.name}'; project SDK was not changed")
+            AnteniaNotifications.failure(
+                project,
+                "missing-java-sdk-${neoProject.javaVersion}",
+                "Required Java SDK not found",
+                "No Java ${neoProject.javaVersion} SDK is configured. The project SDK was not changed.",
+            )
+            return
+        }
+        if (ProjectRootManager.getInstance(project).projectSdk == sdk) {
+            logger.info("Project SDK already matches Java ${neoProject.javaVersion} for '${project.name}': ${sdk.name}")
+            return
+        }
         ApplicationManager.getApplication().runWriteAction {
             ProjectRootManager.getInstance(project).projectSdk = sdk
         }
+        logger.info("Selected project SDK for '${project.name}': ${sdk.name} (${sdk.versionString})")
     }
 
     internal fun chooseSdk(javaVersion: Int): Sdk? = ProjectJdkTable.getInstance().allJdks

@@ -2,6 +2,8 @@
 
 The IntelliJ project should be automatically configured with values depending on the project type, version, and whether it has react subproject or not.
 
+Detection and automatic configuration failures should notify the user and remain available in the IDE Event Log. Repeated occurrences of the same failure should be deduplicated to avoid notification spam.
+
 - Configure the Java version that match the project version
   chose amongst possible java versions in order of preference (temurin, highest version first, then other jdks, highest version first)
 - Compilation shared heap size: 4096
@@ -98,7 +100,7 @@ e.g.
           <element id="library" level="project" name="Maven: jakarta.xml.bind:jakarta.xml.bind-api:4.0.2" />
           <element id="library" level="project" name="Maven: jakarta.xml.ws:jakarta.xml.ws-api:4.0.2" />
           <element id="library" level="project" name="Maven: com.sun.xml.bind:jaxb-impl:4.0.5" />
-          <element id="file-copy" path="$PROJECT_DIR$/../../../../Users/LéopoldHubert/.m2/repository/com/sun/xml/bind/jaxb-core/4.0.5/jaxb-core-4.0.5.jar" output-file-name="com.sun.xml.bind-jaxb-core-4.0.5.jar" />
+          <element id="file-copy" path="$PROJECT_DIR$/../../../../Users/Lï¿½opoldHubert/.m2/repository/com/sun/xml/bind/jaxb-core/4.0.5/jaxb-core-4.0.5.jar" output-file-name="com.sun.xml.bind-jaxb-core-4.0.5.jar" />
           <element id="library" level="project" name="Maven: org.eclipse.angus:angus-activation:2.0.2" />
           <element id="library" level="project" name="Maven: org.apache.xmlrpc:xmlrpc-client:3.1.3" />
           <element id="library" level="project" name="Maven: org.apache.xmlrpc:xmlrpc-common:3.1.3" />
@@ -181,7 +183,7 @@ e.g.
           <element id="library" level="project" name="Maven: org.apache.cxf:cxf-rt-frontend-simple:4.1.0" />
           <element id="library" level="project" name="Maven: org.apache.cxf:cxf-core:4.1.0" />
           <element id="library" level="project" name="Maven: org.glassfish.jaxb:jaxb-runtime:4.0.5" />
-          <element id="file-copy" path="$PROJECT_DIR$/../../../../Users/LéopoldHubert/.m2/repository/org/glassfish/jaxb/jaxb-core/4.0.5/jaxb-core-4.0.5.jar" output-file-name="org.glassfish.jaxb-jaxb-core-4.0.5.jar" />
+          <element id="file-copy" path="$PROJECT_DIR$/../../../../Users/Lï¿½opoldHubert/.m2/repository/org/glassfish/jaxb/jaxb-core/4.0.5/jaxb-core-4.0.5.jar" output-file-name="org.glassfish.jaxb-jaxb-core-4.0.5.jar" />
           <element id="library" level="project" name="Maven: org.glassfish.jaxb:txw2:4.0.5" />
           <element id="library" level="project" name="Maven: com.sun.istack:istack-commons-runtime:4.1.2" />
           <element id="library" level="project" name="Maven: org.apache.ws.xmlschema:xmlschema-core:2.3.1" />

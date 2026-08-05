@@ -6,10 +6,13 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.JavaParameters
 import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.execution.configurations.RunnerSettings
+import com.intellij.openapi.diagnostic.Logger
 import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.project.NeoProjectDetector
 
 class NeoEnvironmentExtension : RunConfigurationExtension() {
+    private val logger = Logger.getInstance(NeoEnvironmentExtension::class.java)
+
     override fun isApplicableFor(configuration: RunConfigurationBase<*>): Boolean =
         NeoProjectDetector.detect(configuration.project) != null
 
@@ -21,8 +24,13 @@ class NeoEnvironmentExtension : RunConfigurationExtension() {
         params: JavaParameters,
         runnerSettings: RunnerSettings?,
     ) {
+        val rmiHostnameAlreadyPresent = hasRmiHostname(params.env[JAVA_TOOL_OPTIONS])
         val environment = environment(configuration, params.env[JAVA_TOOL_OPTIONS]) ?: return
         params.env = params.env + environment
+        logger.info(
+            "Injected Neo environment into Java parameters for '${configuration.name}': " +
+                "${environment.keys.joinToString()}, rmiHostnameAlreadyPresent=$rmiHostnameAlreadyPresent",
+        )
     }
 
     @Throws(ExecutionException::class)
@@ -34,6 +42,9 @@ class NeoEnvironmentExtension : RunConfigurationExtension() {
     ) {
         val environment = environment(configuration, cmdLine.environment[JAVA_TOOL_OPTIONS]) ?: return
         cmdLine.environment.putAll(environment)
+        logger.info(
+            "Injected Neo environment into command line for '${configuration.name}' (runner=$runnerId): ${environment.keys.joinToString()}",
+        )
     }
 
     private fun environment(configuration: RunConfigurationBase<*>, existingJavaToolOptions: String?): Map<String, String>? {
@@ -62,3 +73,6 @@ internal fun appendRmiHostname(existing: String?): String {
         else -> "$options $RMI_HOSTNAME_OPTION"
     }
 }
+
+private fun hasRmiHostname(options: String?): Boolean =
+    RMI_HOSTNAME_OPTION in options.orEmpty().split(Regex("\\s+")).filter(String::isNotEmpty)

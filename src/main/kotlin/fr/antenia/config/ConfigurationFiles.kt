@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -13,6 +14,8 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 object ConfigurationFiles {
+    private val logger = Logger.getInstance(ConfigurationFiles::class.java)
+
     fun propertyPath(project: Project, type: NeoProjectType): Path =
         ProjectConfigurationState.getInstance(project).root(project).resolve(type.directoryName).resolve(type.configurationFile)
 
@@ -27,6 +30,7 @@ object ConfigurationFiles {
             NeoProjectType.SELFCARE -> Unit
         }
         LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)
+        logger.debug("Ensured ${type.displayName} configuration directory exists: $directory")
         return directory.resolve(type.configurationFile)
     }
 
@@ -36,15 +40,21 @@ object ConfigurationFiles {
         val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)
         if (virtualFile == null) {
             Files.writeString(path, OrderedPropertiesCodec.render(document))
+            logger.debug("Wrote Neo configuration directly to $path")
             return
         }
         val fileDocument = ReadAction.compute<Document?, RuntimeException> {
             FileDocumentManager.getInstance().getDocument(virtualFile)
-        } ?: return
+        }
+        if (fileDocument == null) {
+            logger.warn("Neo configuration was not written because no editor document was available: $path")
+            error("No editor document was available for $path")
+        }
         WriteCommandAction.runWriteCommandAction(project, "Update Neo configuration", null, Runnable {
             fileDocument.setText(renderForEditor(document))
             FileDocumentManager.getInstance().saveDocument(fileDocument)
         })
+        logger.debug("Wrote Neo configuration through the editor document: $path")
     }
 
     fun reset(project: Project, type: NeoProjectType): Path {
@@ -56,12 +66,14 @@ object ConfigurationFiles {
         ApplicationManager.getApplication().invokeLater {
             LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path)?.refresh(false, false)
         }
+        logger.info("Reset ${type.displayName} configuration to template: $path")
         return path
     }
 
     private fun copyTemplateIfMissing(resource: String, destination: Path) {
         if (Files.exists(destination)) return
         javaClass.getResourceAsStream(resource)!!.use { Files.copy(it, destination) }
+        logger.info("Created Neo configuration file from $resource: $destination")
     }
 }
 

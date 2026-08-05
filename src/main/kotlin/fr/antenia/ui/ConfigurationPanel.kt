@@ -3,6 +3,7 @@ package fr.antenia.ui
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -30,11 +31,14 @@ import fr.antenia.config.OrderedProperties
 import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.config.PropertyLine
 import fr.antenia.credentials.GlobalDatabaseSettings
+import fr.antenia.credentials.DatabaseCredentials
+import fr.antenia.credentials.ProjectDatabaseCredentials
 import fr.antenia.database.DatabaseProfileSynchronizer
 import fr.antenia.database.MysqlConnection
 import fr.antenia.project.DatabaseKeys
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoSchema
+import fr.antenia.notifications.AnteniaNotifications
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
@@ -58,6 +62,7 @@ class ConfigurationPanel(
     private val project: Project,
     private val neoProject: NeoProject,
 ) : Disposable {
+    private val logger = Logger.getInstance(ConfigurationPanel::class.java)
     private val schema = NeoSchema.forType(neoProject.type)
     private val state = ProjectConfigurationState.getInstance(project)
     private lateinit var document: OrderedProperties
@@ -148,8 +153,14 @@ class ConfigurationPanel(
     private fun reset() {
         if (Messages.showYesNoDialog(project, "Reset ${neoProject.type.configurationFile} to its defaults?", "Reset Neo Configuration", Messages.getWarningIcon()) != Messages.YES) return
         changingFile = true
-        ConfigurationFiles.reset(project, neoProject.type)
-        changingFile = false
+        try {
+            ConfigurationFiles.reset(project, neoProject.type)
+        } catch (exception: Exception) {
+            reportFailure("configuration-reset", "Neo configuration could not be reset", exception)
+            return
+        } finally {
+            changingFile = false
+        }
         reloadFromDisk()
     }
 
@@ -161,6 +172,13 @@ class ConfigurationPanel(
             DatabaseProfileSynchronizer.update(project, neoProject)
             status.text = "${neoProject.type.displayName} | $file"
         }.onFailure {
+            logger.warn("Unable to load Neo configuration for '${project.name}'", it)
+            AnteniaNotifications.failure(
+                project,
+                "configuration-panel-load",
+                "Neo configuration could not be loaded",
+                "${it.message ?: it.javaClass.simpleName}. See the IDE log for details.",
+            )
             status.text = "Unable to load configuration: ${it.message}"
             status.foreground = JBColor.RED
         }
@@ -186,9 +204,15 @@ class ConfigurationPanel(
         try {
             ConfigurationFiles.write(project, file, document)
             databaseProfileAlarm.cancelAllRequests()
-            databaseProfileAlarm.addRequest({ DatabaseProfileSynchronizer.update(project, neoProject) }, 500)
+            databaseProfileAlarm.addRequest({
+                runCatching { DatabaseProfileSynchronizer.update(project, neoProject) }
+                    .onFailure { reportFailure("database-profile-update", "MySQL profile could not be synchronized", it) }
+            }, 500)
             status.text = "Saved $file"
             status.foreground = UIUtil.getLabelForeground()
+            logger.debug("Saved Neo configuration for '${project.name}': $file")
+        } catch (exception: Exception) {
+            reportFailure("configuration-save", "Neo configuration could not be saved", exception)
         } finally {
             changingFile = false
         }
@@ -233,6 +257,18 @@ class ConfigurationPanel(
         model.sync(document)
     }
 
+    private fun reportFailure(key: String, title: String, exception: Throwable) {
+        logger.error("$title for '${project.name}'", exception)
+        AnteniaNotifications.failure(
+            project,
+            key,
+            title,
+            "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+        )
+        status.text = "$title: ${exception.message ?: exception.javaClass.simpleName}"
+        status.foreground = JBColor.RED
+    }
+
     private fun databaseKeys(keys: DatabaseKeys): Set<String> = buildSet {
         add(keys.url)
         keys.database?.let(::add)
@@ -269,13 +305,21 @@ class ConfigurationPanel(
             host.addActionListener { update() }
             override.addActionListener {
                 if (loading) return@addActionListener
+                val wasOverriding = state.overrideGlobalCredentials
+                if (wasOverriding && !override.isSelected) saveOverride()
                 state.overrideGlobalCredentials = override.isSelected
                 updateEnabled()
-                if (!override.isSelected) {
-                    loading = true
+                loading = true
+                val restoredOverride = if (override.isSelected) loadOverride() else {
                     loadGlobal()
-                    loading = false
+                    false
                 }
+                loading = false
+                logger.info(
+                    "Database credential override changed for '${project.name}': enabled=${override.isSelected}, " +
+                        "activeSource=${if (override.isSelected) "project" else "global"}, " +
+                        "restoredSavedOverride=$restoredOverride, retainedProjectOverride=${ProjectDatabaseCredentials.credentials(project) != null}",
+                )
                 update()
             }
             listOf(port, database, username).forEach { it.document.onChange(::update) }
@@ -294,6 +338,7 @@ class ConfigurationPanel(
             override.isSelected = state.overrideGlobalCredentials
             username.text = keys.usernames.firstNotNullOfOrNull(document::value).orEmpty()
             password.text = keys.passwords.firstNotNullOfOrNull(document::value).orEmpty()
+            if (override.isSelected) saveOverride()
             updateEnabled()
             loading = false
         }
@@ -302,6 +347,21 @@ class ConfigurationPanel(
             val global = GlobalDatabaseSettings.getInstance().credentials()
             username.text = global.username
             password.text = global.password
+        }
+
+        private fun loadOverride(): Boolean {
+            return ProjectDatabaseCredentials.credentials(project)?.let {
+                username.text = it.username
+                password.text = it.password
+                true
+            } ?: false
+        }
+
+        private fun saveOverride() {
+            ProjectDatabaseCredentials.save(
+                project,
+                DatabaseCredentials(username.text, password.password.concatToString()),
+            )
         }
 
         private fun updateEnabled() {
@@ -320,6 +380,7 @@ class ConfigurationPanel(
             keys.usernames.forEach { document.setValue(it, username.text) }
             val passwordValue = password.password.concatToString()
             keys.passwords.forEach { document.setValue(it, passwordValue) }
+            if (override.isSelected) saveOverride()
             refreshTablePreservingSelection()
             persist()
         }

@@ -8,12 +8,14 @@ import com.intellij.database.dataSource.LocalDataSourceManager
 import com.intellij.database.dataSource.SchemaControl
 import com.intellij.database.util.TreePatternUtils
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.diagnostic.Logger
 import fr.antenia.config.ConfigurationFiles
 import fr.antenia.config.OrderedProperties
 import fr.antenia.credentials.DatabaseCredentials
 import fr.antenia.project.DatabaseKeys
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoSchema
+import fr.antenia.notifications.AnteniaNotifications
 
 internal data class MysqlConnection(
     val host: String,
@@ -47,19 +49,45 @@ internal fun configuredCredentials(document: OrderedProperties, keys: DatabaseKe
 )
 
 object DatabaseProfileSynchronizer {
+    private val logger = Logger.getInstance(DatabaseProfileSynchronizer::class.java)
+
     fun update(project: Project, neoProject: NeoProject) {
-        if (project.isDisposed) return
-        val keys = NeoSchema.forType(neoProject.type).database ?: return
+        if (project.isDisposed) {
+            logger.debug("Database profile synchronization skipped for '${project.name}': project is disposed")
+            return
+        }
+        val keys = NeoSchema.forType(neoProject.type).database
+        if (keys == null) {
+            logger.info("Database profile synchronization skipped for '${project.name}': no database schema")
+            return
+        }
         val document = ConfigurationFiles.read(ConfigurationFiles.ensureCreated(project, neoProject.type))
         update(project, document, keys)
     }
 
     private fun update(project: Project, document: OrderedProperties, keys: DatabaseKeys) {
-        val connection = MysqlConnection.parse(document.value(keys.url).orEmpty()) ?: return
-        if (connection.host.isBlank() || connection.database.isBlank()) return
+        val connection = MysqlConnection.parse(document.value(keys.url).orEmpty())
+        if (connection == null) {
+            logger.info("Database profile synchronization skipped for '${project.name}': MySQL URL is absent or invalid")
+            return
+        }
+        if (connection.host.isBlank() || connection.database.isBlank()) {
+            logger.info("Database profile synchronization skipped for '${project.name}': host or database is blank")
+            return
+        }
         val credentials = configuredCredentials(document, keys)
 
-        val driver = DatabaseDriverManager.getInstance().getDriver("mysql.8") ?: return
+        val driver = DatabaseDriverManager.getInstance().getDriver("mysql.8")
+        if (driver == null) {
+            logger.warn("Database profile synchronization skipped for '${project.name}': bundled MySQL driver 'mysql.8' was not found")
+            AnteniaNotifications.failure(
+                project,
+                "mysql-driver-unavailable",
+                "MySQL profile could not be synchronized",
+                "The bundled MySQL driver 'mysql.8' was not found. See the IDE log for details.",
+            )
+            return
+        }
         val manager = LocalDataSourceManager.getInstance(project)
         val existing = manager.dataSources.firstOrNull { it.name == connection.host }
         val dataSource = existing ?: LocalDataSource.fromDriver(driver, connection.url, false).apply {
@@ -76,6 +104,18 @@ object DatabaseProfileSynchronizer {
         val databaseScope = TreePatternUtils.parse(false, "*:${TreePatternUtils.escape(connection.database)}")
         dataSource.setIntrospectionScope(TreePatternUtils.union(dataSource.introspectionScope, databaseScope))
 
-        if (existing == null) manager.addDataSource(dataSource) else manager.fireDataSourceUpdated(dataSource)
+        if (existing == null) {
+            manager.addDataSource(dataSource)
+            logger.info(
+                "Created MySQL data source for '${project.name}': host=${connection.host}, port=${connection.port}, " +
+                    "database=${connection.database}, usernamePresent=${credentials.username.isNotEmpty()}, passwordPresent=${credentials.password.isNotEmpty()}",
+            )
+        } else {
+            manager.fireDataSourceUpdated(dataSource)
+            logger.info(
+                "Updated MySQL data source for '${project.name}': host=${connection.host}, port=${connection.port}, " +
+                    "addedDatabase=${connection.database}, usernamePresent=${credentials.username.isNotEmpty()}, passwordPresent=${credentials.password.isNotEmpty()}",
+            )
+        }
     }
 }

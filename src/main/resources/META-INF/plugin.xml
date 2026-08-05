@@ -38,7 +38,8 @@
         <toolWindow id="Neo Configuration" factoryClass="fr.antenia.ui.ConfigurationToolWindowFactory" anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowPalette"/>
         <applicationConfigurable parentId="tools" instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
-                                 id="fr.antenia.globalDatabase" displayName="Antenia Projects"/>
+                                  id="fr.antenia.globalDatabase" displayName="Antenia Projects"/>
+        <notificationGroup id="Antenia Projects" displayType="BALLOON" isLogByDefault="true"/>
         <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>
         <runConfigurationExtension implementation="fr.antenia.run.NeoEnvironmentExtension"/>
     </extensions>

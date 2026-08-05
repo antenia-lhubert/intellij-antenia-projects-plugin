@@ -28,6 +28,7 @@ DB Credentials form should have:
 - port (defaults to 3306)
 - database
 - have the option to override global credentials
+- disabling the override should retain the project credentials securely so they are restored when the override is enabled again
 
 Env form should have:
 - an env select (should be a select to chose amongst known envs + a free input so that user can put in an unknown env)

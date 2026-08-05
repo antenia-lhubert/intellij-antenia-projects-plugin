@@ -1,4 +1,5 @@
-.gradle
-.idea
-.intellijPlatform
-build
+.gradle/
+.idea/
+.intellijPlatform/
+build/
+.kotlin/
