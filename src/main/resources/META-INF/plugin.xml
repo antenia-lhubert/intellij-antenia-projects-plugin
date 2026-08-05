@@ -29,6 +29,7 @@
     <depends>com.intellij.properties</depends>
     <depends>com.intellij.modules.json</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>com.intellij.modules.vcs</depends>
 
     <resource-bundle>messages.MyMessageBundle</resource-bundle>
 
@@ -41,11 +42,26 @@
                                  id="fr.antenia" displayName="Antenia">
             <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
                           id="fr.antenia.globalDatabase" displayName="Projects"/>
+            <configurable instance="fr.antenia.commit.CommitTemplatesConfigurable"
+                          id="fr.antenia.commitTemplates" displayName="Commit Templates"/>
         </applicationConfigurable>
         <notificationGroup id="Antenia Projects" displayType="BALLOON" isLogByDefault="true"/>
         <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>
         <runConfigurationExtension implementation="fr.antenia.run.NeoEnvironmentExtension"/>
     </extensions>
+
+    <actions>
+        <group id="fr.antenia.commit.TemplateGroup" class="fr.antenia.commit.CommitTemplateActionGroup"
+               text="Commit Template" popup="true">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
+                          relative-to-action="Vcs.ShowMessageHistory"/>
+        </group>
+        <action id="fr.antenia.commit.MessageStatus" class="fr.antenia.commit.CommitMessageStatusAction"
+                text="Commit message status">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
+                          relative-to-action="fr.antenia.commit.TemplateGroup"/>
+        </action>
+    </actions>
 
     <applicationListeners>
         <listener class="fr.antenia.automation.JdkApplicationListener"

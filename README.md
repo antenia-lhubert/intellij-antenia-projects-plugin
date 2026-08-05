@@ -34,6 +34,7 @@ The plugin checks `java.version`, `jdk.version`, `version.compiler`, `maven.comp
 - Creates the exploded WAR artifact and a local `webapp` Tomcat run configuration.
 - Injects the project configuration directory and `JAVA_TOOL_OPTIONS=-Djava.rmi.server.hostname=127.0.0.1` when a run configuration starts.
 - Creates npm and compound run configurations when Neo Core contains `novanet-react/package.json`.
+- Adds organization commit templates and live, non-blocking commit-message validation to every VCS commit prompt.
 
 Projects that do not match a supported artifact ID are left unchanged. The global settings page remains available.
 
@@ -62,6 +63,12 @@ Only the directory for the detected project type is created. Use **Reset** in th
 Configure a shared database username and password under **Settings > Tools > Antenia > Projects**. Secrets are stored through IntelliJ Password Safe and are synchronized to supported projects unless **Override global credentials** is enabled in the project's database form. Disabling an override keeps its project credentials in Password Safe so they are restored if the override is enabled again.
 
 The database host, port, and database name are always project-specific. The port defaults to `3306`.
+
+### Commit Templates
+
+Use **Commit Template** in the commit toolbar to prefill an Evolution, Bug, Transversal Bug, Structure, Code Review, or Merge message. The adjacent status shows the complete message character count. A message is valid when it contains at least 25 characters in total and its first line matches an Antenia format; the status never prevents a commit.
+
+Create blank custom templates or clone an existing template under **Settings > Tools > Antenia > Commit Templates**. Custom templates can be edited, reordered, or removed; the built-in Antenia templates are read-only and cannot be removed. Commit templates are available in every project, including projects that are not recognized as Neo projects.
 
 ### Run Configuration
 
