@@ -2,12 +2,12 @@ package fr.antenia.ui
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -28,6 +28,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import fr.antenia.config.ConfigurationFiles
 import fr.antenia.config.OrderedProperties
+import fr.antenia.config.OrderedPropertiesCodec
 import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.config.PropertyLine
 import fr.antenia.credentials.GlobalDatabaseSettings
@@ -67,7 +68,6 @@ class ConfigurationPanel(
     private val state = ProjectConfigurationState.getInstance(project)
     private lateinit var document: OrderedProperties
     private lateinit var file: Path
-    private var virtualFile: VirtualFile? = null
     private var changingFile = false
     private var model = ConfigurationTableModel(schema, ::persist)
     private val table = JBTable(model)
@@ -168,7 +168,6 @@ class ConfigurationPanel(
         runCatching {
             file = ConfigurationFiles.ensureCreated(project, neoProject.type)
             load(ConfigurationFiles.read(file))
-            attachDocumentListener()
             DatabaseProfileSynchronizer.update(project, neoProject)
             status.text = "${neoProject.type.displayName} | $file"
         }.onFailure {
@@ -220,25 +219,25 @@ class ConfigurationPanel(
     }
 
     private fun installFileListeners() {
+        EditorFactory.getInstance().eventMulticaster.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(event: DocumentEvent) {
+                val editedFile = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                if (!changingFile && isConfigurationFile(editedFile.path)) {
+                    load(OrderedPropertiesCodec.parse(event.document.text))
+                }
+            }
+        }, this)
         project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                if (!changingFile && events.any { it.path.replace('\\', '/') == file.toString().replace('\\', '/') }) {
+                if (!changingFile && events.any { isConfigurationFile(it.path) }) {
                     ApplicationManager.getApplication().invokeLater { if (!changingFile && Files.exists(file)) reloadFromDisk() }
                 }
             }
         })
     }
 
-    private fun attachDocumentListener() {
-        val current = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file) ?: return
-        if (current == virtualFile) return
-        virtualFile = current
-        FileDocumentManager.getInstance().getDocument(current)?.addDocumentListener(object : DocumentListener {
-            override fun documentChanged(event: DocumentEvent) {
-                if (!changingFile && current == virtualFile) load(fr.antenia.config.OrderedPropertiesCodec.parse(event.document.text))
-            }
-        }, this)
-    }
+    private fun isConfigurationFile(path: String): Boolean =
+        ::file.isInitialized && FileUtil.pathsEqual(path, file.toString())
 
     private fun showSelectedForm() {
         val card = when (model.rowAt(table.selectedRow)) {
