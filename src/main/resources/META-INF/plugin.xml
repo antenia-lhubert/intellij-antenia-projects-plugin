@@ -43,7 +43,7 @@
                                   key="configurable.antenia.display.name">
             <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
                           id="fr.antenia.globalDatabase" bundle="messages.MyMessageBundle"
-                          key="configurable.projects.display.name"/>
+                          key="configurable.credentials.display.name"/>
             <configurable instance="fr.antenia.commit.CommitTemplatesConfigurable"
                           id="fr.antenia.commitTemplates" bundle="messages.MyMessageBundle"
                           key="configurable.commit.templates.display.name"/>

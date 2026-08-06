@@ -12,7 +12,7 @@ class GlobalDatabaseConfigurable : SearchableConfigurable {
     private var username = ""
     private var password = ""
 
-    override fun getDisplayName(): String = message("configurable.projects.display.name")
+    override fun getDisplayName(): String = message("configurable.credentials.display.name")
     override fun getId(): String = "fr.antenia.globalDatabase"
 
     override fun createComponent(): JComponent {

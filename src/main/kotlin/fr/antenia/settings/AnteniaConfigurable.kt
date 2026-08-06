@@ -16,7 +16,7 @@ class AnteniaConfigurable : SearchableConfigurable {
     override fun createComponent(): JComponent = panel {
         group(message("settings.antenia.group")) {
             row {
-                link(message("configurable.projects.display.name")) { open(GlobalDatabaseConfigurable::class.java) }
+                link(message("configurable.credentials.display.name")) { open(GlobalDatabaseConfigurable::class.java) }
                 comment(message("settings.projects.description"))
             }
             row {

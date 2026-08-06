@@ -53,6 +53,7 @@ import fr.antenia.settings.AnteniaConfigurable
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
@@ -60,6 +61,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.DefaultCellEditor
 import javax.swing.DefaultComboBoxModel
+import javax.swing.Icon
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JButton
@@ -173,20 +175,20 @@ class ConfigurationPanel(
         }
         val actions = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
             isOpaque = false
-            add(JButton(AllIcons.General.Settings).apply {
+            add(createSquareIconButton(AllIcons.General.Settings).apply {
                 toolTipText = message("configuration.settings.tooltip")
                 accessibleContext.accessibleName = message("configuration.settings.accessible.name")
                 isFocusable = false
                 addActionListener { openAnteniaSettings() }
             })
-            add(JButton(AllIcons.Actions.Refresh).also { button ->
+            add(createSquareIconButton(AllIcons.Actions.Refresh).also { button ->
                 reapplyButton = button
                 button.toolTipText = message("configuration.reapply.tooltip")
                 button.accessibleContext.accessibleName = message("configuration.reapply.accessible.name")
                 button.isFocusable = false
                 button.addActionListener { runStartupActions(message("configuration.reapply.success")) }
             })
-            add(JButton(AllIcons.Actions.Rollback).also { button ->
+            add(createSquareIconButton(AllIcons.Actions.Rollback).also { button ->
                 resetButton = button
                 button.toolTipText = message("configuration.project.reset.tooltip")
                 button.accessibleContext.accessibleName = message("configuration.project.reset.accessible.name")
@@ -202,6 +204,10 @@ class ConfigurationPanel(
             add(search, BorderLayout.CENTER)
             add(actions, BorderLayout.EAST)
         }
+    }
+
+    private fun createSquareIconButton(icon: Icon) = JButton(icon).apply {
+        preferredSize = Dimension(preferredSize.height, preferredSize.height)
     }
 
     private fun openAnteniaSettings() {
