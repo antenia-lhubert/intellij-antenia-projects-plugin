@@ -44,6 +44,8 @@
                           id="fr.antenia.globalDatabase" displayName="Projects"/>
             <configurable instance="fr.antenia.commit.CommitTemplatesConfigurable"
                           id="fr.antenia.commitTemplates" displayName="Commit Templates"/>
+            <configurable instance="fr.antenia.settings.TomcatRunConfigurationConfigurable"
+                          id="fr.antenia.runConfigurations" displayName="Run Configurations"/>
         </applicationConfigurable>
         <notificationGroup id="Antenia Projects" displayType="BALLOON" isLogByDefault="true"/>
         <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>

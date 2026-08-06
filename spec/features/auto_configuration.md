@@ -399,17 +399,24 @@ It should always:
   - Neo Core: `http: 8080, https: 8443, JMX: 1999`
   - Neo GED: `http: 8081, https: 8444, JMX: 2000`
   - Neo Selfcare: `http: 8082, https: 8445, JMX: 2001`
-- Have after launch enabled on default browser with corresponding url `https://localhost:[https_port]/[application_context]/`
-- Have on frame deactivation to relead classes and resources
+- Have the default browser URL set to `https://localhost:[https_port]/[application_context]/`
+- Apply the global Tomcat run configuration settings for `OPEN_IN_BROWSER`, `UPDATE_ON_FRAME_DEACTIVATION`,
+  `UPDATE_CLASSES_ON_FRAME_DEACTIVATION`, and `UPDATING_POLICY`
+
+The global settings default to `true`, `true`, `false`, and `update-classes-and-resources`, respectively. They are applied when the plugin creates
+the `webapp` run configuration. Existing run configurations remain unchanged so project-specific user settings are preserved.
+The frame-deactivation setting offers nothing, update resources, and update resources and classes. The update-action setting offers
+update resources, update resources and classes, redeploy, and restart server. These actions are configured independently.
 
 e.g.
 ```xml
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="webapp" type="#com.intellij.j2ee.web.tomcat.TomcatRunConfigurationFactory" factoryName="Local" APPLICATION_SERVER_NAME="Tomcat 10.1.57" ALTERNATIVE_JRE_ENABLED="false">
+    <option name="OPEN_IN_BROWSER" value="true" />
     <option name="OPEN_IN_BROWSER_URL" value="https://localhost:8443/novanet/" />
     <option name="UPDATE_ON_FRAME_DEACTIVATION" value="true" />
-    <option name="UPDATE_CLASSES_ON_FRAME_DEACTIVATION" value="true" />
-    <option name="UPDATING_POLICY" value="restart-server" />
+    <option name="UPDATE_CLASSES_ON_FRAME_DEACTIVATION" value="false" />
+    <option name="UPDATING_POLICY" value="update-classes-and-resources" />
     <deployment>
       <artifact name="webapp-novanet:war exploded">
         <settings>

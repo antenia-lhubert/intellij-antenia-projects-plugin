@@ -1,0 +1,87 @@
+package fr.antenia.settings
+
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.PersistentStateComponent
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.State
+import com.intellij.openapi.components.Storage
+
+data class TomcatRunConfigurationOptions(
+    val openInBrowser: Boolean,
+    val updateOnFrameDeactivation: Boolean,
+    val updateClassesOnFrameDeactivation: Boolean,
+    val updatingPolicy: String,
+)
+
+enum class TomcatFrameDeactivationAction(
+    private val label: String,
+    val updateOnFrameDeactivation: Boolean,
+    val updateClassesOnFrameDeactivation: Boolean,
+) {
+    NOTHING("Nothing", false, false),
+    UPDATE_RESOURCES("Update resources", true, false),
+    UPDATE_RESOURCES_AND_CLASSES("Update resources and classes", true, true),
+    ;
+
+    override fun toString(): String = label
+
+    companion object {
+        fun fromOptions(update: Boolean, updateClasses: Boolean): TomcatFrameDeactivationAction = when {
+            !update -> NOTHING
+            updateClasses -> UPDATE_RESOURCES_AND_CLASSES
+            else -> UPDATE_RESOURCES
+        }
+    }
+}
+
+enum class TomcatUpdatingPolicy(val id: String, private val label: String) {
+    UPDATE_RESOURCES("update-resources", "Update resources"),
+    UPDATE_RESOURCES_AND_CLASSES("update-classes-and-resources", "Update resources and classes"),
+    REDEPLOY("redeploy-artifacts", "Redeploy"),
+    RESTART_SERVER("restart-server", "Restart server"),
+    ;
+
+    override fun toString(): String = label
+
+    companion object {
+        fun fromId(id: String): TomcatUpdatingPolicy = entries.firstOrNull { it.id == id } ?: UPDATE_RESOURCES_AND_CLASSES
+    }
+}
+
+@Service(Service.Level.APP)
+@State(name = "AnteniaTomcatRunConfigurations", storages = [Storage("antenia.xml")])
+class TomcatRunConfigurationSettings : PersistentStateComponent<TomcatRunConfigurationSettings.SettingsState> {
+    private var settingsState = SettingsState()
+
+    override fun getState(): SettingsState = settingsState
+
+    override fun loadState(state: SettingsState) {
+        settingsState = state
+    }
+
+    fun options(): TomcatRunConfigurationOptions = TomcatRunConfigurationOptions(
+        openInBrowser = settingsState.openInBrowser,
+        updateOnFrameDeactivation = settingsState.updateOnFrameDeactivation,
+        updateClassesOnFrameDeactivation = settingsState.updateClassesOnFrameDeactivation,
+        updatingPolicy = settingsState.updatingPolicy,
+    )
+
+    fun save(options: TomcatRunConfigurationOptions) {
+        settingsState.openInBrowser = options.openInBrowser
+        settingsState.updateOnFrameDeactivation = options.updateOnFrameDeactivation
+        settingsState.updateClassesOnFrameDeactivation = options.updateClassesOnFrameDeactivation
+        settingsState.updatingPolicy = options.updatingPolicy
+    }
+
+    class SettingsState {
+        var openInBrowser: Boolean = true
+        var updateOnFrameDeactivation: Boolean = true
+        var updateClassesOnFrameDeactivation: Boolean = false
+        var updatingPolicy: String = TomcatUpdatingPolicy.UPDATE_RESOURCES_AND_CLASSES.id
+    }
+
+    companion object {
+        fun getInstance(): TomcatRunConfigurationSettings =
+            ApplicationManager.getApplication().getService(TomcatRunConfigurationSettings::class.java)
+    }
+}

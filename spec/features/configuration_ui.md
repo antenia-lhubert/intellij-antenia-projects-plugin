@@ -23,6 +23,17 @@ User should be able to configure global database credentials that are safely sto
 Global database credentials should contain only a username and password; connection details remain project-specific.
 Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
 
+Users should be able to configure global Tomcat run configuration values in `Settings > Tools > Antenia > Run Configurations`:
+- `OPEN_IN_BROWSER`, defaulting to `true`
+- On frame deactivation, defaulting to update resources, with choices for nothing, update resources, and
+  update resources and classes. This sets `UPDATE_ON_FRAME_DEACTIVATION` and `UPDATE_CLASSES_ON_FRAME_DEACTIVATION`.
+- On update action, defaulting to update resources and classes, with choices for update resources, update resources and classes,
+  redeploy, and restart server. This sets `UPDATING_POLICY`.
+
+On frame deactivation and on update action are separate, independent settings.
+These settings should be stored globally and applied when the plugin creates a project's `webapp` run configuration.
+Existing run configurations should not be modified.
+
 DB Credentials form should have:
 - host (should be a select to chose amongst known servers + a free input so that user can put in an unknown host)
 - port (defaults to 3306)

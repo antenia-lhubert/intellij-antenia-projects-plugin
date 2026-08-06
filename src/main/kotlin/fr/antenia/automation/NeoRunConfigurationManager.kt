@@ -29,6 +29,7 @@ import com.intellij.packaging.elements.PackagingElementFactory
 import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.notifications.AnteniaNotifications
 import fr.antenia.project.NeoProject
+import fr.antenia.settings.TomcatRunConfigurationSettings
 import org.jetbrains.idea.maven.project.MavenProjectsManager
 import org.jetbrains.idea.tomcat.TomcatModuleDeploymentModel
 import org.jetbrains.idea.tomcat.server.TomcatConfiguration
@@ -181,12 +182,13 @@ object NeoRunConfigurationManager {
             )
             return null
         }
+        val tomcatSettings = TomcatRunConfigurationSettings.getInstance().options()
         (model as? CommonStrategy)?.apply {
             setAlternativeJreEnabled(false)
-            settingsBean.OPEN_IN_BROWSER = true
-            settingsBean.UPDATE_ON_FRAME_DEACTIVATION = true
-            settingsBean.UPDATE_CLASSES_ON_FRAME_DEACTIVATION = true
-            settingsBean.UPDATING_POLICY = "restart-server"
+            settingsBean.OPEN_IN_BROWSER = tomcatSettings.openInBrowser
+            settingsBean.UPDATE_ON_FRAME_DEACTIVATION = tomcatSettings.updateOnFrameDeactivation
+            settingsBean.UPDATE_CLASSES_ON_FRAME_DEACTIVATION = tomcatSettings.updateClassesOnFrameDeactivation
+            settingsBean.UPDATING_POLICY = tomcatSettings.updatingPolicy
         }
         val tomcatModel = model.serverModel as? TomcatLocalModel
         if (tomcatModel == null) {
