@@ -17,7 +17,7 @@ Each of those projects have versions:
 
 - 0-1.4: Java 8, Tomcat 9
 - 1.5: Java 17, tomcat 10.1
-- 1.6+: Java 25, tomcat 11
+- 1.6+: Java 25, tomcat 10.1
 
 Those versions are not specified as version number in the pom.xml.
 Instead, they can be deduced from the java version in the pom (in priority order: `java.version`, `jdk.version`, `version.compiler`, `maven.compiler.release`, `maven.compiler.target`, `maven.compiler.source`).

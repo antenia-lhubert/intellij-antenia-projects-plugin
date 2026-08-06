@@ -28,7 +28,7 @@ The Java version declared in the Maven properties determines the expected develo
 | --- | --- |
 | 8 | 9 |
 | 17 | 10.1 |
-| 25 and later | 11 |
+| 25 and later | 10.1 |
 
 The plugin checks `java.version`, `jdk.version`, `version.compiler`, `maven.compiler.release`, `maven.compiler.target`, then `maven.compiler.source`. If none is present, Java 8 is assumed.
 

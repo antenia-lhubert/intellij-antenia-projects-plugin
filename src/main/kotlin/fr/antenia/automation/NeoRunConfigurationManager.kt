@@ -153,8 +153,7 @@ object NeoRunConfigurationManager {
         val tomcatType = TomcatConfiguration.getInstance()
         val targetVersion = when {
             neoProject.javaVersion <= 8 -> "9"
-            neoProject.javaVersion <= 17 -> "10.1"
-            else -> "11"
+            else -> "10.1"
         }
         val candidates = ApplicationServersManager.getInstance().getApplicationServers(tomcatType.integration)
             .filter { serverMatches(it.name, targetVersion) }

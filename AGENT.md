@@ -27,7 +27,7 @@ Read [`spec/`](spec/) before changing behavior. The specification is the only so
 | GED | `webapp-ged` | `ged` | `configuration.properties` | `GED_DIR` | `/ged` | `8081` / `8444` / `2000` |
 | Selfcare | `webapp-owlnet` | `owlnet` | `owlnet.properties` | `OWLNET_DIR` | `/owlnet` | `8082` / `8445` / `2001` |
 
-Java/Tomcat mapping is Java 8/Tomcat 9, Java 17/Tomcat 10.1, and Java 25+/Tomcat 11. Core may contain a `novanet-react` subproject. Add future project types and frontend variants to the spec-driven model rather than scattering additional type checks.
+Java/Tomcat mapping is Java 8/Tomcat 9 and Java 17+/Tomcat 10.1. Core may contain a `novanet-react` subproject. Add future project types and frontend variants to the spec-driven model rather than scattering additional type checks.
 
 ## Repository Map
 
