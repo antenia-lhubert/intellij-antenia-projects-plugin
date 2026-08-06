@@ -13,6 +13,7 @@ import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.util.concurrency.AppExecutorUtil
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -52,8 +53,8 @@ internal object JdkAutoConfigurator {
             AnteniaNotifications.failure(
                 null,
                 "jdk-global-configuration",
-                "JDK automatic configuration failed",
-                "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                message("notification.jdk.configuration.failure.title"),
+                message("common.error.details", exception.message ?: exception.javaClass.simpleName),
             )
         }
     }
@@ -77,7 +78,7 @@ internal object JdkAutoConfigurator {
                 return@forEach
             }
             try {
-                if (!javaSdk.isValidSdkHome(homeString)) error("IntelliJ does not recognize this directory as a JDK")
+                if (!javaSdk.isValidSdkHome(homeString)) error(message("notification.jdk.invalid.home"))
                 val suggestedName = javaSdk.suggestSdkName(null, homeString).ifBlank { home.name }
                 val name = jdkName(suggestedName, isMise, configuredNames)
                 val sdk = javaSdk.createJdk(name, homeString, false)
@@ -90,8 +91,8 @@ internal object JdkAutoConfigurator {
                 AnteniaNotifications.failure(
                     null,
                     "jdk-registration-${home.normalizedKey()}",
-                    "JDK installation could not be configured",
-                    "$home: ${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                    message("notification.jdk.installation.failure.title"),
+                    message("common.error.path.details", home, exception.message ?: exception.javaClass.simpleName),
                 )
             }
         }
@@ -148,7 +149,7 @@ internal object JdkAutoConfigurator {
                 }
             }
         } catch (exception: Exception) {
-            discoveryFailure(source.lowercase().replace(' ', '-'), "Could not inspect $directory", exception)
+            discoveryFailure(source.lowercase().replace(' ', '-'), message("notification.discovery.inspect.failure", directory), exception)
         }
     }
 
@@ -162,18 +163,18 @@ internal object JdkAutoConfigurator {
             val output = CapturingProcessHandler(
                 GeneralCommandLine(mise.absolutePath, "ls", "java", "--json"),
             ).runProcess(MISE_TIMEOUT_MS)
-            if (output.isTimeout) error("mise timed out after ${MISE_TIMEOUT_MS / 1000} seconds")
-            if (output.exitCode != 0) error(output.stderr.trim().ifEmpty { "mise exited with code ${output.exitCode}" })
+            if (output.isTimeout) error(message("notification.mise.timeout", MISE_TIMEOUT_MS / 1000))
+            if (output.exitCode != 0) error(output.stderr.trim().ifEmpty { message("notification.mise.exit.code", output.exitCode) })
             parseMiseInstallPaths(output.stdout).forEach { addCandidate(it, true, "mise", candidates) }
         } catch (exception: Exception) {
-            discoveryFailure("mise", "Could not discover JDK installations with mise", exception)
+            discoveryFailure("mise", message("notification.discovery.jdk.mise.failure"), exception)
         }
     }
 
     private fun addCandidate(candidate: Path, isMise: Boolean, source: String, candidates: MutableMap<Path, Boolean>) {
         val resolved = resolveJdkHomes(candidate)
         if (resolved.isEmpty()) {
-            discoveryFailure(source.lowercase().replace(' ', '-'), "$candidate is not a valid JDK installation", null)
+            discoveryFailure(source.lowercase().replace(' ', '-'), message("notification.discovery.invalid.jdk", candidate), null)
             return
         }
         resolved.forEach { candidates.putIfAbsent(it, isMise) }
@@ -181,12 +182,12 @@ internal object JdkAutoConfigurator {
 
     private fun discoveryFailure(source: String, message: String, exception: Exception?) {
         if (exception == null) logger.warn(message) else logger.warn(message, exception)
-        val detail = exception?.let { ": ${it.message ?: it.javaClass.simpleName}" }.orEmpty()
+        val detail = exception?.let { message("notification.discovery.exception.detail", it.message ?: it.javaClass.simpleName) }.orEmpty()
         AnteniaNotifications.failure(
             null,
             "jdk-discovery-$source-${message.hashCode()}",
-            "JDK installation detection failed",
-            "$message$detail. See the IDE log for details.",
+            message("notification.jdk.detection.failure.title"),
+            message("notification.discovery.details", message, detail),
         )
     }
 

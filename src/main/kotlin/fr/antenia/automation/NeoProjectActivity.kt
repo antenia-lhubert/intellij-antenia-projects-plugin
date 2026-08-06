@@ -15,6 +15,7 @@ import fr.antenia.credentials.GlobalDatabaseCredentialsSynchronizer
 import fr.antenia.credentials.GlobalDatabaseSettings
 import fr.antenia.database.DatabaseProfileSynchronizer
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoProjectDetector
 import kotlinx.coroutines.Dispatchers
@@ -67,8 +68,8 @@ class NeoProjectActivity : ProjectActivity {
                 AnteniaNotifications.failure(
                     project,
                     "automatic-configuration",
-                    "Neo automatic configuration failed",
-                    "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                    message("notification.automatic.configuration.failure.title"),
+                    message("common.error.details", exception.message ?: exception.javaClass.simpleName),
                 )
                 throw exception
             } finally {
@@ -86,8 +87,8 @@ class NeoProjectActivity : ProjectActivity {
             AnteniaNotifications.failure(
                 project,
                 "missing-java-sdk-${neoProject.javaVersion}",
-                "Required Java SDK not found",
-                "No Java ${neoProject.javaVersion} SDK is configured. The project SDK was not changed.",
+                message("notification.java.sdk.missing.title"),
+                message("notification.java.sdk.missing.message", neoProject.javaVersion),
             )
             return
         }

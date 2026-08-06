@@ -5,6 +5,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import fr.antenia.MyMessageBundle.message
 
 data class TomcatRunConfigurationOptions(
     val openInBrowser: Boolean,
@@ -18,12 +19,12 @@ enum class TomcatFrameDeactivationAction(
     val updateOnFrameDeactivation: Boolean,
     val updateClassesOnFrameDeactivation: Boolean,
 ) {
-    NOTHING("Nothing", false, false),
-    UPDATE_RESOURCES("Update resources", true, false),
-    UPDATE_RESOURCES_AND_CLASSES("Update resources and classes", true, true),
+    NOTHING("settings.tomcat.action.nothing", false, false),
+    UPDATE_RESOURCES("settings.tomcat.action.update.resources", true, false),
+    UPDATE_RESOURCES_AND_CLASSES("settings.tomcat.action.update.resources.classes", true, true),
     ;
 
-    override fun toString(): String = label
+    override fun toString(): String = message(label)
 
     companion object {
         fun fromOptions(update: Boolean, updateClasses: Boolean): TomcatFrameDeactivationAction = when {
@@ -35,13 +36,13 @@ enum class TomcatFrameDeactivationAction(
 }
 
 enum class TomcatUpdatingPolicy(val id: String, private val label: String) {
-    UPDATE_RESOURCES("update-resources", "Update resources"),
-    UPDATE_RESOURCES_AND_CLASSES("update-classes-and-resources", "Update resources and classes"),
-    REDEPLOY("redeploy-artifacts", "Redeploy"),
-    RESTART_SERVER("restart-server", "Restart server"),
+    UPDATE_RESOURCES("update-resources", "settings.tomcat.action.update.resources"),
+    UPDATE_RESOURCES_AND_CLASSES("update-classes-and-resources", "settings.tomcat.action.update.resources.classes"),
+    REDEPLOY("redeploy-artifacts", "settings.tomcat.action.redeploy"),
+    RESTART_SERVER("restart-server", "settings.tomcat.action.restart"),
     ;
 
-    override fun toString(): String = label
+    override fun toString(): String = message(label)
 
     companion object {
         fun fromId(id: String): TomcatUpdatingPolicy = entries.firstOrNull { it.id == id } ?: UPDATE_RESOURCES_AND_CLASSES

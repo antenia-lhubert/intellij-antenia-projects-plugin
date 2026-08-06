@@ -27,6 +27,7 @@ import com.intellij.packaging.artifacts.ArtifactManager
 import com.intellij.packaging.artifacts.ArtifactType
 import com.intellij.packaging.elements.PackagingElementFactory
 import fr.antenia.config.ProjectConfigurationState
+import fr.antenia.MyMessageBundle.message
 import fr.antenia.notifications.AnteniaNotifications
 import fr.antenia.project.NeoProject
 import fr.antenia.settings.TomcatRunConfigurationSettings
@@ -90,8 +91,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "artifact-module-unavailable",
-                "Exploded artifact could not be created",
-                "Module '${neoProject.type.artifactId}' was not found. Import the Maven project and see the IDE log for details.",
+                message("notification.artifact.creation.failure.title"),
+                message("notification.artifact.module.missing", neoProject.type.artifactId),
             )
             return null
         }
@@ -100,8 +101,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "exploded-war-type-unavailable",
-                "Exploded artifact could not be created",
-                "IntelliJ artifact type 'exploded-war' is unavailable. See the IDE log for details.",
+                message("notification.artifact.creation.failure.title"),
+                message("notification.artifact.type.missing"),
             )
             return null
         }
@@ -141,8 +142,8 @@ object NeoRunConfigurationManager {
                 failure(
                     project,
                     "artifact-missing-after-commit",
-                    "Exploded artifact could not be created",
-                    "Artifact '${neoProject.type.explodedArtifactName}' was missing after the model was committed. See the IDE log for details.",
+                    message("notification.artifact.creation.failure.title"),
+                    message("notification.artifact.commit.missing", neoProject.type.explodedArtifactName),
                 )
             } else {
                 logger.info(
@@ -172,8 +173,12 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "tomcat-$targetVersion-unavailable",
-                "Webapp run configuration could not be created",
-                "No Tomcat $targetVersion server is configured. Available servers: ${availableServers.ifEmpty { listOf("none") }.joinToString()}.",
+                message("notification.webapp.creation.failure.title"),
+                message(
+                    "notification.tomcat.server.missing",
+                    targetVersion,
+                    availableServers.ifEmpty { listOf(message("notification.server.none")) }.joinToString(),
+                ),
             )
             return null
         }
@@ -185,8 +190,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "webapp-javaee-model-unavailable",
-                "Webapp run configuration could not be created",
-                "The created configuration does not expose a Java EE model. See the IDE log for details.",
+                message("notification.webapp.creation.failure.title"),
+                message("notification.webapp.javaee.model.missing"),
             )
             return null
         }
@@ -203,8 +208,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "webapp-tomcat-model-unavailable",
-                "Webapp run configuration could not be created",
-                "The created configuration does not expose a local Tomcat model. See the IDE log for details.",
+                message("notification.webapp.creation.failure.title"),
+                message("notification.webapp.tomcat.model.missing"),
             )
             return null
         }
@@ -233,8 +238,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "artifact-deployment-javaee-model-unavailable",
-                "Artifact deployment could not be configured",
-                "Run configuration '${settings.name}' is not a Java EE configuration.",
+                message("notification.artifact.deployment.failure.title"),
+                message("notification.artifact.deployment.not.javaee", settings.name),
             )
             return
         }
@@ -243,8 +248,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "artifact-deployment-settings-unavailable",
-                "Artifact deployment could not be configured",
-                "Deployment settings are unavailable for run configuration '${settings.name}'.",
+                message("notification.artifact.deployment.failure.title"),
+                message("notification.artifact.deployment.settings.missing", settings.name),
             )
             return
         }
@@ -270,8 +275,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "npm-configuration-factory-unavailable",
-                "React run configuration could not be created",
-                "The npm run configuration factory is unavailable. See the IDE log for details.",
+                message("notification.react.creation.failure.title"),
+                message("notification.react.factory.missing"),
             )
             return null
         }
@@ -281,8 +286,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "unexpected-npm-configuration",
-                "React run configuration could not be created",
-                "The created run configuration is not an npm configuration. See the IDE log for details.",
+                message("notification.react.creation.failure.title"),
+                message("notification.react.type.invalid"),
             )
             return null
         }
@@ -320,8 +325,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "npm-install-task-unavailable",
-                "React build tasks could not be configured",
-                "The npm install before-run task could not be created. See the IDE log for details.",
+                message("notification.react.tasks.failure.title"),
+                message("notification.react.install.task.missing"),
             )
             return
         }
@@ -338,8 +343,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "npm-build-task-unavailable",
-                "React build tasks could not be configured",
-                "The npm build before-run task could not be created. See the IDE log for details.",
+                message("notification.react.tasks.failure.title"),
+                message("notification.react.build.task.missing"),
             )
             return
         }
@@ -363,8 +368,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "compound-configuration-factory-unavailable",
-                "Compound run configuration could not be created",
-                "The compound run configuration factory is unavailable. See the IDE log for details.",
+                message("notification.compound.creation.failure.title"),
+                message("notification.compound.factory.missing"),
             )
             return
         }
@@ -374,8 +379,8 @@ object NeoRunConfigurationManager {
             failure(
                 project,
                 "unexpected-compound-configuration",
-                "Compound run configuration could not be created",
-                "The created run configuration has an unexpected type. See the IDE log for details.",
+                message("notification.compound.creation.failure.title"),
+                message("notification.compound.type.invalid"),
             )
             return
         }

@@ -8,6 +8,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 
 data class DatabaseCredentials(
     val username: String,
@@ -37,8 +38,8 @@ class GlobalDatabaseSettings {
                 AnteniaNotifications.failure(
                     project,
                     "global-database-credentials",
-                    "Global database credentials could not be applied",
-                    "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                    message("notification.global.credentials.apply.failure.title"),
+                    message("common.error.details", exception.message ?: exception.javaClass.simpleName),
                 )
             }
             throw exception
@@ -68,8 +69,8 @@ object ProjectDatabaseCredentials {
             AnteniaNotifications.failure(
                 project,
                 "project-database-credentials",
-                "Project database credentials could not be saved",
-                "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                message("notification.project.credentials.save.failure.title"),
+                message("common.error.details", exception.message ?: exception.javaClass.simpleName),
             )
             throw exception
         }

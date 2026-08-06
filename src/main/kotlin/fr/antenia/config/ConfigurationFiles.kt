@@ -9,6 +9,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import fr.antenia.project.NeoProjectType
+import fr.antenia.MyMessageBundle.message
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -48,9 +49,9 @@ object ConfigurationFiles {
         }
         if (fileDocument == null) {
             logger.warn("Neo configuration was not written because no editor document was available: $path")
-            error("No editor document was available for $path")
+            error(message("configuration.document.unavailable", path))
         }
-        WriteCommandAction.runWriteCommandAction(project, "Update Neo configuration", null, Runnable {
+        WriteCommandAction.runWriteCommandAction(project, message("configuration.update.command"), null, Runnable {
             fileDocument.setText(renderForEditor(document))
             FileDocumentManager.getInstance().saveDocument(fileDocument)
         })

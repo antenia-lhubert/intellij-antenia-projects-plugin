@@ -7,6 +7,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import fr.antenia.project.NeoProjectDetector
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 
 class ConfigurationToolWindowFactory : ToolWindowFactory {
     private val logger = Logger.getInstance(ConfigurationToolWindowFactory::class.java)
@@ -25,8 +26,8 @@ class ConfigurationToolWindowFactory : ToolWindowFactory {
             AnteniaNotifications.failure(
                 project,
                 "configuration-tool-window",
-                "Neo Configuration tool window could not be opened",
-                "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                message("configuration.toolwindow.failure.title"),
+                message("common.error.details", exception.message ?: exception.javaClass.simpleName),
             )
             throw exception
         }

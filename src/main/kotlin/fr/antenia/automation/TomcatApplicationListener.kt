@@ -12,6 +12,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.util.concurrency.AppExecutorUtil
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 import org.jetbrains.idea.tomcat.server.TomcatIntegration
 import org.jetbrains.idea.tomcat.server.TomcatPersistentData
 import java.nio.file.Files
@@ -56,8 +57,8 @@ class TomcatApplicationListener : AppLifecycleListener {
                 AnteniaNotifications.failure(
                     null,
                     "tomcat-registration-${home.normalizedKey()}",
-                    "Tomcat installation could not be configured",
-                    "$home: ${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                    message("notification.tomcat.installation.failure.title"),
+                    message("common.error.path.details", home, exception.message ?: exception.javaClass.simpleName),
                 )
             }
         }
@@ -93,7 +94,7 @@ class TomcatApplicationListener : AppLifecycleListener {
                 }
             }
         } catch (exception: Exception) {
-            discoveryFailure("tools", "Could not inspect $toolsDirectory", exception)
+            discoveryFailure("tools", message("notification.discovery.inspect.failure", toolsDirectory), exception)
         }
     }
 
@@ -107,18 +108,18 @@ class TomcatApplicationListener : AppLifecycleListener {
             val output = CapturingProcessHandler(
                 GeneralCommandLine(mise.absolutePath, "ls", "tomcat", "--json"),
             ).runProcess(MISE_TIMEOUT_MS)
-            if (output.isTimeout) error("mise timed out after ${MISE_TIMEOUT_MS / 1000} seconds")
-            if (output.exitCode != 0) error(output.stderr.trim().ifEmpty { "mise exited with code ${output.exitCode}" })
+            if (output.isTimeout) error(message("notification.mise.timeout", MISE_TIMEOUT_MS / 1000))
+            if (output.exitCode != 0) error(output.stderr.trim().ifEmpty { message("notification.mise.exit.code", output.exitCode) })
             parseMiseInstallPaths(output.stdout).forEach { addCandidate(it, "mise", homes) }
         } catch (exception: Exception) {
-            discoveryFailure("mise", "Could not discover Tomcat installations with mise", exception)
+            discoveryFailure("mise", message("notification.discovery.tomcat.mise.failure"), exception)
         }
     }
 
     private fun addCandidate(candidate: Path, source: String, homes: MutableSet<Path>) {
         val resolved = resolveTomcatHomes(candidate)
         if (resolved.isEmpty()) {
-            discoveryFailure(source, "$candidate is not a valid Tomcat installation", null)
+            discoveryFailure(source, message("notification.discovery.invalid.tomcat", candidate), null)
             return
         }
         homes += resolved
@@ -126,12 +127,12 @@ class TomcatApplicationListener : AppLifecycleListener {
 
     private fun discoveryFailure(source: String, message: String, exception: Exception?) {
         if (exception == null) logger.warn(message) else logger.warn(message, exception)
-        val detail = exception?.let { ": ${it.message ?: it.javaClass.simpleName}" }.orEmpty()
+        val detail = exception?.let { message("notification.discovery.exception.detail", it.message ?: it.javaClass.simpleName) }.orEmpty()
         AnteniaNotifications.failure(
             null,
             "tomcat-discovery-$source-${message.hashCode()}",
-            "Tomcat installation detection failed",
-            "$message$detail. See the IDE log for details.",
+            message("notification.tomcat.detection.failure.title"),
+            message("notification.discovery.details", message, detail),
         )
     }
 

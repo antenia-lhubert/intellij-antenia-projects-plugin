@@ -8,6 +8,7 @@ import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.project.NeoProjectDetector
 import fr.antenia.project.NeoSchema
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 
 object GlobalDatabaseCredentialsSynchronizer {
     private val logger = Logger.getInstance(GlobalDatabaseCredentialsSynchronizer::class.java)
@@ -22,8 +23,8 @@ object GlobalDatabaseCredentialsSynchronizer {
                 AnteniaNotifications.failure(
                     project,
                     "global-database-credential-synchronization",
-                    "Global database credentials could not be synchronized",
-                    "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                    message("notification.global.credentials.sync.failure.title"),
+                    message("common.error.details", exception.message ?: exception.javaClass.simpleName),
                 )
             }
         }

@@ -11,8 +11,9 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.vcs.VcsDataKeys
+import fr.antenia.MyMessageBundle.message
 
-class CommitTemplateActionGroup : ActionGroup("Commit Template", true), DumbAware {
+class CommitTemplateActionGroup : ActionGroup(message("commit.template.group"), true), DumbAware {
     init {
         templatePresentation.putClientProperty(ActionUtil.SHOW_TEXT_IN_TOOLBAR, true)
     }
@@ -48,7 +49,10 @@ class CommitMessageStatusAction : DumbAwareAction() {
 
         val validation = CommitMessageValidator.validate(document.text)
         event.presentation.isEnabledAndVisible = true
-        event.presentation.text = "${validation.characterCount} chars | ${if (validation.isValid) "Valid" else "Invalid"}"
+        event.presentation.text = message(
+            if (validation.isValid) "commit.status.valid" else "commit.status.invalid",
+            validation.characterCount,
+        )
         event.presentation.description = validation.description
         event.presentation.icon = if (validation.isValid) AllIcons.General.InspectionsOK else AllIcons.General.InspectionsError
     }
@@ -70,7 +74,7 @@ private class ApplyCommitTemplateAction(private val template: CommitTemplate) : 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 }
 
-private class EditCommitTemplatesAction : DumbAwareAction("Edit Templates...") {
+private class EditCommitTemplatesAction : DumbAwareAction(message("commit.template.edit")) {
     override fun actionPerformed(event: AnActionEvent) {
         ShowSettingsUtil.getInstance().showSettingsDialog(event.project, CommitTemplatesConfigurable::class.java)
     }

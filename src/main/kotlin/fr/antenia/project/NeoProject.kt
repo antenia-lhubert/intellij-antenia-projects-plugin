@@ -5,11 +5,12 @@ import com.intellij.openapi.diagnostic.Logger
 import java.nio.file.Files
 import java.nio.file.Path
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 enum class NeoProjectType(
-    val displayName: String,
+    private val displayNameKey: String,
     val artifactId: String,
     val directoryName: String,
     val configurationFile: String,
@@ -19,10 +20,11 @@ enum class NeoProjectType(
     val httpsPort: Int,
     val jmxPort: Int,
 ) {
-    CORE("Neo Core", "webapp-novanet", "novanet", "novanet.properties", "NOVANET_DIR", "novanet", 8080, 8443, 1999),
-    GED("Neo GED", "webapp-ged", "ged", "configuration.properties", "GED_DIR", "ged", 8081, 8444, 2000),
-    SELFCARE("Neo Selfcare", "webapp-owlnet", "owlnet", "owlnet.properties", "OWLNET_DIR", "owlnet", 8082, 8445, 2001);
+    CORE("project.type.core", "webapp-novanet", "novanet", "novanet.properties", "NOVANET_DIR", "novanet", 8080, 8443, 1999),
+    GED("project.type.ged", "webapp-ged", "ged", "configuration.properties", "GED_DIR", "ged", 8081, 8444, 2000),
+    SELFCARE("project.type.selfcare", "webapp-owlnet", "owlnet", "owlnet.properties", "OWLNET_DIR", "owlnet", 8082, 8445, 2001);
 
+    val displayName: String get() = message(displayNameKey)
     val explodedArtifactName: String get() = "$artifactId:war exploded"
 }
 
@@ -49,8 +51,8 @@ object NeoProjectDetector {
             AnteniaNotifications.failure(
                 project,
                 "project-detection",
-                "Neo project detection failed",
-                "The root pom.xml could not be inspected: ${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+                message("project.detection.failure.title"),
+                message("project.detection.failure.message", exception.message ?: exception.javaClass.simpleName),
             )
         }
     }

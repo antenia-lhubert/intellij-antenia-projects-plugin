@@ -39,13 +39,17 @@
         <toolWindow id="Neo Configuration" factoryClass="fr.antenia.ui.ConfigurationToolWindowFactory" anchor="right"
                     icon="AllIcons.Toolwindows.ToolWindowPalette"/>
         <applicationConfigurable parentId="tools" instance="fr.antenia.settings.AnteniaConfigurable"
-                                 id="fr.antenia" displayName="Antenia">
+                                  id="fr.antenia" bundle="messages.MyMessageBundle"
+                                  key="configurable.antenia.display.name">
             <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
-                          id="fr.antenia.globalDatabase" displayName="Projects"/>
+                          id="fr.antenia.globalDatabase" bundle="messages.MyMessageBundle"
+                          key="configurable.projects.display.name"/>
             <configurable instance="fr.antenia.commit.CommitTemplatesConfigurable"
-                          id="fr.antenia.commitTemplates" displayName="Commit Templates"/>
+                          id="fr.antenia.commitTemplates" bundle="messages.MyMessageBundle"
+                          key="configurable.commit.templates.display.name"/>
             <configurable instance="fr.antenia.settings.TomcatRunConfigurationConfigurable"
-                          id="fr.antenia.runConfigurations" displayName="Run Configurations"/>
+                          id="fr.antenia.runConfigurations" bundle="messages.MyMessageBundle"
+                          key="configurable.run.configurations.display.name"/>
         </applicationConfigurable>
         <notificationGroup id="Antenia Projects" displayType="BALLOON" isLogByDefault="true"/>
         <postStartupActivity implementation="fr.antenia.automation.NeoProjectActivity"/>
@@ -54,12 +58,12 @@
 
     <actions>
         <group id="fr.antenia.commit.TemplateGroup" class="fr.antenia.commit.CommitTemplateActionGroup"
-               text="Commit Template" popup="true">
+                popup="true">
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
                           relative-to-action="Vcs.ShowMessageHistory"/>
         </group>
         <action id="fr.antenia.commit.MessageStatus" class="fr.antenia.commit.CommitMessageStatusAction"
-                text="Commit message status">
+                >
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="after"
                           relative-to-action="fr.antenia.commit.TemplateGroup"/>
         </action>

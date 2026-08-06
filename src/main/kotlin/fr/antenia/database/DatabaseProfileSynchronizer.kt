@@ -16,6 +16,7 @@ import fr.antenia.project.DatabaseKeys
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoSchema
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.MyMessageBundle.message
 
 internal data class MysqlConnection(
     val host: String,
@@ -83,8 +84,8 @@ object DatabaseProfileSynchronizer {
             AnteniaNotifications.failure(
                 project,
                 "mysql-driver-unavailable",
-                "MySQL profile could not be synchronized",
-                "The bundled MySQL driver 'mysql.8' was not found. See the IDE log for details.",
+                message("configuration.database.profile.failure.title"),
+                message("notification.mysql.driver.missing"),
             )
             return
         }

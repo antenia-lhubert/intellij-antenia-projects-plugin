@@ -4,6 +4,7 @@ import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import fr.antenia.MyMessageBundle.message
 import javax.swing.JComponent
 
 class GlobalDatabaseConfigurable : SearchableConfigurable {
@@ -11,16 +12,16 @@ class GlobalDatabaseConfigurable : SearchableConfigurable {
     private var username = ""
     private var password = ""
 
-    override fun getDisplayName(): String = "Projects"
+    override fun getDisplayName(): String = message("configurable.projects.display.name")
     override fun getId(): String = "fr.antenia.globalDatabase"
 
     override fun createComponent(): JComponent {
         resetValues()
         return panel {
-            group("Global database credentials") {
-                row("Username:") { textField().bindText({ username }, { username = it }) }
-                row("Password:") { passwordField().bindText({ password }, { password = it }) }
-                row { comment("The password is stored in IntelliJ Password Safe, never in project files or settings XML.") }
+            group(message("settings.database.group")) {
+                row(message("settings.database.username")) { textField().bindText({ username }, { username = it }) }
+                row(message("settings.database.password")) { passwordField().bindText({ password }, { password = it }) }
+                row { comment(message("settings.database.password.storage")) }
             }
         }.also { form = it }
     }

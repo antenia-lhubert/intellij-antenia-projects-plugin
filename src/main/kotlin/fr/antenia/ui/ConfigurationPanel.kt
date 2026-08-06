@@ -33,6 +33,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import fr.antenia.automation.AnteniaStartupActions
 import fr.antenia.automation.NeoRunConfigurationManager
+import fr.antenia.MyMessageBundle.message
 import fr.antenia.config.ConfigurationFiles
 import fr.antenia.config.OrderedProperties
 import fr.antenia.config.OrderedPropertiesCodec
@@ -107,7 +108,7 @@ class ConfigurationPanel(
     init {
         table.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
         table.setShowGrid(false)
-        table.emptyText.text = "No configuration entries"
+        table.emptyText.text = message("configuration.empty")
         table.columnModel.getColumn(0).preferredWidth = 220
         table.columnModel.getColumn(1).preferredWidth = 500
         table.columnModel.getColumn(0).cellEditor = DefaultCellEditor(JComboBox<String>().apply {
@@ -130,13 +131,13 @@ class ConfigurationPanel(
             .setRemoveAction { removeSelected() }
             .setMoveUpAction { moveSelected(-1) }
             .setMoveDownAction { moveSelected(1) }
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Add comment", "Add a comment line", com.intellij.icons.AllIcons.FileTypes.Text) {
+            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.add.comment"), message("configuration.action.add.comment.description"), com.intellij.icons.AllIcons.FileTypes.Text) {
                 override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = addLine(PropertyLine.Comment("# "))
             })
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Add blank", "Add an empty line", com.intellij.icons.AllIcons.Actions.SplitVertically) {
+            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.add.blank"), message("configuration.action.add.blank.description"), com.intellij.icons.AllIcons.Actions.SplitVertically) {
                 override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = addLine(PropertyLine.Blank())
             })
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Reset file", "Reset this file to the default configuration", com.intellij.icons.AllIcons.Actions.Rollback) {
+            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.reset.file"), message("configuration.action.reset.file.description"), com.intellij.icons.AllIcons.Actions.Rollback) {
                 override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = reset()
             })
         formPane = JBScrollPane(cards).apply { border = JBUI.Borders.emptyTop(8) }
@@ -147,7 +148,7 @@ class ConfigurationPanel(
     }
 
     private fun createHeader(): JComponent {
-        searchField.textEditor.emptyText.text = "Search keys and values"
+        searchField.textEditor.emptyText.text = message("configuration.search.placeholder")
         searchField.textEditor.document.onChange { updateSearch(selectFirst = true) }
         searchField.textEditor.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(event: KeyEvent) {
@@ -173,22 +174,22 @@ class ConfigurationPanel(
         val actions = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
             isOpaque = false
             add(JButton(AllIcons.General.Settings).apply {
-                toolTipText = "Open Tools > Antenia settings"
-                accessibleContext.accessibleName = "Antenia Settings"
+                toolTipText = message("configuration.settings.tooltip")
+                accessibleContext.accessibleName = message("configuration.settings.accessible.name")
                 isFocusable = false
                 addActionListener { openAnteniaSettings() }
             })
             add(JButton(AllIcons.Actions.Refresh).also { button ->
                 reapplyButton = button
-                button.toolTipText = "Run all Antenia startup setup again for this IDE and project"
-                button.accessibleContext.accessibleName = "Reapply Antenia Setup"
+                button.toolTipText = message("configuration.reapply.tooltip")
+                button.accessibleContext.accessibleName = message("configuration.reapply.accessible.name")
                 button.isFocusable = false
-                button.addActionListener { runStartupActions("Startup actions reapplied") }
+                button.addActionListener { runStartupActions(message("configuration.reapply.success")) }
             })
             add(JButton(AllIcons.Actions.Rollback).also { button ->
                 resetButton = button
-                button.toolTipText = "Delete and recreate Antenia-managed project configuration"
-                button.accessibleContext.accessibleName = "Reset Project Setup"
+                button.toolTipText = message("configuration.project.reset.tooltip")
+                button.accessibleContext.accessibleName = message("configuration.project.reset.accessible.name")
                 button.isFocusable = false
                 button.addActionListener { resetPluginConfiguration() }
             })
@@ -211,7 +212,7 @@ class ConfigurationPanel(
         reapplyButton.isEnabled = false
         resetButton.isEnabled = false
         UIUtil.setEnabled(editorSplitter, false, true)
-        status.text = "Reapplying Antenia startup actions..."
+        status.text = message("configuration.reapply.progress")
         status.foreground = UIUtil.getLabelForeground()
         AnteniaStartupActions.reapply(project) { succeeded ->
             if (project.isDisposed) return@reapply
@@ -229,9 +230,8 @@ class ConfigurationPanel(
     private fun resetPluginConfiguration() {
         val answer = Messages.showYesNoDialog(
             project,
-            "This deletes Antenia-managed configuration files and the run configurations named " +
-                "'webapp', 'react', and 'webapp + react', then recreates them from defaults. Continue?",
-            "Reset Antenia Project Configuration",
+            message("configuration.project.reset.confirmation"),
+            message("configuration.project.reset.title"),
             Messages.getWarningIcon(),
         )
         if (answer != Messages.YES) return
@@ -244,12 +244,12 @@ class ConfigurationPanel(
                 ProjectDatabaseCredentials.clear(project)
             }
         } catch (exception: Exception) {
-            reportFailure("project-reset", "Antenia project configuration could not be reset", exception)
+            reportFailure("project-reset", message("configuration.project.reset.failure.title"), exception)
             return
         } finally {
             changingFile = false
         }
-        runStartupActions("Antenia project configuration reset")
+        runStartupActions(message("configuration.project.reset.success"))
     }
 
     private fun updateSearch(selectFirst: Boolean) {
@@ -270,7 +270,7 @@ class ConfigurationPanel(
         if (searchMatches.isEmpty()) {
             activeSearchMatch = -1
             table.clearSelection()
-            searchStatus.text = "No matches"
+            searchStatus.text = message("configuration.search.no.matches")
         } else {
             focusSearchMatch(activeSearchMatch)
         }
@@ -286,7 +286,7 @@ class ConfigurationPanel(
         val row = searchMatches[matchIndex]
         table.selectionModel.setSelectionInterval(row, row)
         table.scrollRectToVisible(table.getCellRect(row, 0, true))
-        searchStatus.text = "${matchIndex + 1} of ${searchMatches.size}"
+        searchStatus.text = message("configuration.search.position", matchIndex + 1, searchMatches.size)
     }
 
     private fun addEntry() = addLine(PropertyLine.Entry(nextAvailableKey(), ""))
@@ -313,12 +313,18 @@ class ConfigurationPanel(
     } ?: "new.key"
 
     private fun reset() {
-        if (Messages.showYesNoDialog(project, "Reset ${neoProject.type.configurationFile} to its defaults?", "Reset Neo Configuration", Messages.getWarningIcon()) != Messages.YES) return
+        if (Messages.showYesNoDialog(
+                project,
+                message("configuration.file.reset.confirmation", neoProject.type.configurationFile),
+                message("configuration.file.reset.title"),
+                Messages.getWarningIcon(),
+            ) != Messages.YES
+        ) return
         changingFile = true
         try {
             ConfigurationFiles.reset(project, neoProject.type)
         } catch (exception: Exception) {
-            reportFailure("configuration-reset", "Neo configuration could not be reset", exception)
+            reportFailure("configuration-reset", message("configuration.file.reset.failure.title"), exception)
             return
         } finally {
             changingFile = false
@@ -337,10 +343,10 @@ class ConfigurationPanel(
             AnteniaNotifications.failure(
                 project,
                 "configuration-panel-load",
-                "Neo configuration could not be loaded",
-                "${it.message ?: it.javaClass.simpleName}. See the IDE log for details.",
+                message("configuration.load.failure.title"),
+                message("common.error.details", it.message ?: it.javaClass.simpleName),
             )
-            status.text = "Unable to load configuration: ${it.message}"
+            status.text = message("configuration.load.failure.status", it.message ?: it.javaClass.simpleName)
             status.foreground = JBColor.RED
         }
     }
@@ -369,13 +375,13 @@ class ConfigurationPanel(
             databaseProfileAlarm.cancelAllRequests()
             databaseProfileAlarm.addRequest({
                 runCatching { DatabaseProfileSynchronizer.update(project, neoProject) }
-                    .onFailure { reportFailure("database-profile-update", "MySQL profile could not be synchronized", it) }
+                    .onFailure { reportFailure("database-profile-update", message("configuration.database.profile.failure.title"), it) }
             }, 500)
-            status.text = "Saved $file"
+            status.text = message("configuration.save.success", file)
             status.foreground = UIUtil.getLabelForeground()
             logger.debug("Saved Neo configuration for '${project.name}': $file")
         } catch (exception: Exception) {
-            reportFailure("configuration-save", "Neo configuration could not be saved", exception)
+            reportFailure("configuration-save", message("configuration.save.failure.title"), exception)
         } finally {
             changingFile = false
         }
@@ -426,9 +432,9 @@ class ConfigurationPanel(
             project,
             key,
             title,
-            "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
+            message("common.error.details", exception.message ?: exception.javaClass.simpleName),
         )
-        status.text = "$title: ${exception.message ?: exception.javaClass.simpleName}"
+        status.text = message("configuration.failure.status", title, exception.message ?: exception.javaClass.simpleName)
         status.foreground = JBColor.RED
     }
 
@@ -447,13 +453,13 @@ class ConfigurationPanel(
         )).apply { isEditable = true }
         private val port = JBTextField("3306")
         private val database = JBTextField()
-        private val override = JBCheckBox("Override").apply {
-            accessibleContext.accessibleName = "Override global database credentials for this project"
+        private val override = JBCheckBox(message("configuration.database.override")).apply {
+            accessibleContext.accessibleName = message("configuration.database.override.accessible.name")
         }
-        private val globalCredentialsLink = ActionLink("global database credentials") {
+        private val globalCredentialsLink = ActionLink(message("configuration.database.global.credentials")) {
             ShowSettingsUtil.getInstance().showSettingsDialog(project, GlobalDatabaseConfigurable::class.java)
         }.apply {
-            toolTipText = "View or change the credentials used when this override is disabled"
+            toolTipText = message("configuration.database.global.credentials.tooltip")
         }
         private val username = JBTextField()
         private val password = JBPasswordField()
@@ -461,18 +467,18 @@ class ConfigurationPanel(
         private var query = "?autoReconnect=true"
 
         val component: JComponent = FormBuilder.createFormBuilder()
-            .addComponent(JBLabel("Database").apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
-            .addLabeledComponent("Host:", host)
-            .addLabeledComponent("Port:", port)
-            .addLabeledComponent("Database:", database)
+            .addComponent(JBLabel(message("configuration.database.title")).apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
+            .addLabeledComponent(message("configuration.database.host"), host)
+            .addLabeledComponent(message("configuration.database.port"), port)
+            .addLabeledComponent(message("configuration.database.name"), database)
             .addComponent(JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
                 isOpaque = false
                 add(override)
                 add(globalCredentialsLink)
-                add(JBLabel("for this project"))
+                add(JBLabel(message("configuration.database.for.project")))
             })
-            .addLabeledComponent("Username:", username)
-            .addLabeledComponent("Password:", password)
+            .addLabeledComponent(message("configuration.database.username"), username)
+            .addLabeledComponent(message("configuration.database.password"), password)
             .addComponentFillVertically(JPanel(), 0)
             .panel.apply { border = JBUI.Borders.empty(12) }
 
@@ -565,8 +571,8 @@ class ConfigurationPanel(
         private val environment = JComboBox(arrayOf("DEV", "TEST", "RECETTE", "PROD")).apply { isEditable = true }
         private var loading = false
         val component: JComponent = FormBuilder.createFormBuilder()
-            .addComponent(JBLabel("Environment").apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
-            .addLabeledComponent("Environment:", environment)
+            .addComponent(JBLabel(message("configuration.environment.title")).apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
+            .addLabeledComponent(message("configuration.environment.label"), environment)
             .addComponentFillVertically(JPanel(), 0)
             .panel.apply { border = JBUI.Borders.empty(12) }
 
@@ -597,7 +603,7 @@ class ConfigurationPanel(
                 emptyValue -> table.font.deriveFont(java.awt.Font.ITALIC)
                 else -> table.font.deriveFont(java.awt.Font.PLAIN)
             }
-            if (emptyValue) text = "<empty>"
+            if (emptyValue) text = message("configuration.value.empty")
             foreground = when {
                 selected -> table.selectionForeground
                 item is LogicalRow.Comment || item is LogicalRow.Blank || emptyValue -> UIUtil.getContextHelpForeground()
@@ -637,16 +643,20 @@ private class ConfigurationTableModel(
 
     override fun getRowCount(): Int = rows.size
     override fun getColumnCount(): Int = 2
-    override fun getColumnName(column: Int): String = if (column == 0) "Key / type" else "Value"
+    override fun getColumnName(column: Int): String = if (column == 0) {
+        message("configuration.column.key.type")
+    } else {
+        message("configuration.column.value")
+    }
     override fun isCellEditable(row: Int, column: Int): Boolean =
         rows.getOrNull(row) is LogicalRow.Entry || (rows.getOrNull(row) is LogicalRow.Comment && column == 1)
 
     override fun getValueAt(row: Int, column: Int): Any = when (val item = rows[row]) {
         is LogicalRow.Entry -> if (column == 0) item.line.key else item.line.value
-        is LogicalRow.Comment -> if (column == 0) "Comment" else item.line.raw.trimStart('#', '!', ' ')
-        is LogicalRow.Blank -> if (column == 0) "Blank line" else ""
-        is LogicalRow.Database -> if (column == 0) "Database credentials" else "Edit in the form below"
-        is LogicalRow.Environment -> if (column == 0) "Environment" else "Edit in the form below"
+        is LogicalRow.Comment -> if (column == 0) message("configuration.row.comment") else item.line.raw.trimStart('#', '!', ' ')
+        is LogicalRow.Blank -> if (column == 0) message("configuration.row.blank") else ""
+        is LogicalRow.Database -> if (column == 0) message("configuration.row.database") else message("configuration.row.edit.form")
+        is LogicalRow.Environment -> if (column == 0) message("configuration.row.environment") else message("configuration.row.edit.form")
     }
 
     override fun setValueAt(value: Any?, row: Int, column: Int) {

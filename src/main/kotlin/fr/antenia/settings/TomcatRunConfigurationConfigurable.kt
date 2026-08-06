@@ -5,6 +5,7 @@ import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
+import fr.antenia.MyMessageBundle.message
 import javax.swing.JComponent
 
 class TomcatRunConfigurationConfigurable : SearchableConfigurable {
@@ -13,29 +14,29 @@ class TomcatRunConfigurationConfigurable : SearchableConfigurable {
     private var frameDeactivationAction = TomcatFrameDeactivationAction.UPDATE_RESOURCES
     private var updatingPolicy = TomcatUpdatingPolicy.UPDATE_RESOURCES_AND_CLASSES
 
-    override fun getDisplayName(): String = "Run Configurations"
+    override fun getDisplayName(): String = message("configurable.run.configurations.display.name")
     override fun getId(): String = "fr.antenia.runConfigurations"
 
     override fun createComponent(): JComponent {
         resetValues()
         return panel {
-            group("Tomcat run configurations") {
+            group(message("settings.tomcat.group")) {
                 row {
-                    checkBox("Open browser after launch")
+                    checkBox(message("settings.tomcat.open.browser"))
                         .bindSelected({ openInBrowser }, { openInBrowser = it })
                 }
-                row("On frame deactivation:") {
+                row(message("settings.tomcat.frame.deactivation")) {
                     comboBox(TomcatFrameDeactivationAction.entries)
                         .bindItem(
                             { frameDeactivationAction },
                             { frameDeactivationAction = it ?: TomcatFrameDeactivationAction.UPDATE_RESOURCES },
                         )
                 }
-                row("On update action:") {
+                row(message("settings.tomcat.update.action")) {
                     comboBox(TomcatUpdatingPolicy.entries)
                         .bindItem({ updatingPolicy }, { updatingPolicy = it ?: TomcatUpdatingPolicy.UPDATE_RESOURCES_AND_CLASSES })
                 }
-                row { comment("These values are applied when Antenia creates a webapp run configuration.") }
+                row { comment(message("settings.tomcat.description")) }
             }
         }.also { form = it }
     }

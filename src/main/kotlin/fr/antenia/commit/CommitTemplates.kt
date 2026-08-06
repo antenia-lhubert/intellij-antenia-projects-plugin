@@ -1,5 +1,7 @@
 package fr.antenia.commit
 
+import fr.antenia.MyMessageBundle.message
+
 data class CommitTemplate(
     val name: String,
     val content: String,
@@ -8,12 +10,12 @@ data class CommitTemplate(
 
 object CommitTemplates {
     fun defaults(): List<CommitTemplate> = listOf(
-        CommitTemplate("Evolution", "[EVO] - Mantis : MANTIS_NO : TITRE\n\n> MESSAGE", isDefault = true),
-        CommitTemplate("Bug", "[BUG] - Mantis : MANTIS_NO : TITRE\n\n> MESSAGE", isDefault = true),
-        CommitTemplate("Transversal bug", "[BUG_TRANSVERSAL] - Mantis : MANTIS_NO : TITRE\n\n> MESSAGE", isDefault = true),
-        CommitTemplate("Structure", "[STRUCT] - Mantis : MANTIS_NO : TITRE\n\n> MESSAGE", isDefault = true),
-        CommitTemplate("Code review", "[CODE_REVIEW] - TITRE\n\n> MESSAGE", isDefault = true),
-        CommitTemplate("Merge", "[MERGE] rREVISION | AUTHOR | DATE", isDefault = true),
+        CommitTemplate(message("commit.default.evolution"), message("commit.default.evolution.content"), isDefault = true),
+        CommitTemplate(message("commit.default.bug"), message("commit.default.bug.content"), isDefault = true),
+        CommitTemplate(message("commit.default.transversal.bug"), message("commit.default.transversal.bug.content"), isDefault = true),
+        CommitTemplate(message("commit.default.structure"), message("commit.default.structure.content"), isDefault = true),
+        CommitTemplate(message("commit.default.code.review"), message("commit.default.code.review.content"), isDefault = true),
+        CommitTemplate(message("commit.default.merge"), message("commit.default.merge.content"), isDefault = true),
     )
 
     fun withDefaults(templates: List<CommitTemplate>): List<CommitTemplate> = defaults() + customOnly(templates)
@@ -46,7 +48,7 @@ object CommitMessageValidator {
             return CommitMessageValidation(
                 isValid = false,
                 characterCount = message.length,
-                description = "The commit message must contain at least $MINIMUM_MESSAGE_LENGTH characters.",
+                description = message("commit.validation.minimum.length", MINIMUM_MESSAGE_LENGTH),
             )
         }
 
@@ -57,9 +59,9 @@ object CommitMessageValidator {
             isValid = matchesFormat,
             characterCount = message.length,
             description = if (matchesFormat) {
-                "The commit message has a valid Antenia format."
+                message("commit.validation.valid")
             } else {
-                "The first line does not match an Antenia commit format."
+                message("commit.validation.invalid")
             },
         )
     }

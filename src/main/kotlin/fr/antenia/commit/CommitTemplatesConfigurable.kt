@@ -12,6 +12,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
+import fr.antenia.MyMessageBundle.message
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -28,13 +29,13 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
     private var component: JComponent? = null
     private var updatingFields = false
 
-    override fun getDisplayName(): String = "Commit Templates"
+    override fun getDisplayName(): String = message("configurable.commit.templates.display.name")
     override fun getId(): String = "fr.antenia.commitTemplates"
 
     override fun createComponent(): JComponent {
         table.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
         table.setShowGrid(false)
-        table.emptyText.text = "No commit templates"
+        table.emptyText.text = message("commit.templates.empty")
         table.columnModel.getColumn(0).preferredWidth = 220
         table.putClientProperty("terminateEditOnFocusLost", true)
         table.selectionModel.addListSelectionListener {
@@ -54,7 +55,7 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
             .setMoveUpActionUpdater { model.canMove(table.selectedRow, -1) }
             .setMoveDownAction { moveSelectedTemplate(1) }
             .setMoveDownActionUpdater { model.canMove(table.selectedRow, 1) }
-            .addExtraAction(object : DumbAwareAction("Clone template", "Clone the selected template", AllIcons.Actions.Copy) {
+            .addExtraAction(object : DumbAwareAction(message("commit.templates.clone"), message("commit.templates.clone.description"), AllIcons.Actions.Copy) {
                 override fun actionPerformed(event: AnActionEvent) = cloneSelectedTemplate()
 
                 override fun update(event: AnActionEvent) {
@@ -66,7 +67,7 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
             .createPanel()
         val valuePanel = JPanel(BorderLayout(0, JBUI.scale(4))).apply {
             border = JBUI.Borders.emptyLeft(8)
-            add(JLabel("Template value:"), BorderLayout.NORTH)
+            add(JLabel(message("commit.templates.value")), BorderLayout.NORTH)
             add(JBScrollPane(contentArea), BorderLayout.CENTER)
         }
 
@@ -90,10 +91,10 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
         if (table.isEditing) table.cellEditor.stopCellEditing()
         val templates = model.templates()
         if (templates.any { it.name.isBlank() || it.content.lineSequence().firstOrNull().isNullOrBlank() }) {
-            throw ConfigurationException("Every commit template must have a name and a non-empty first line.")
+            throw ConfigurationException(message("commit.templates.validation.required"))
         }
         if (templates.map { it.name }.distinct().size != templates.size) {
-            throw ConfigurationException("Commit template names must be unique.")
+            throw ConfigurationException(message("commit.templates.validation.unique"))
         }
         CommitTemplateSettings.getInstance().replaceTemplates(templates)
     }
@@ -120,7 +121,7 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
     private fun addTemplate() {
         val row = model.addAfter(
             table.selectedRow,
-            CommitTemplate(uniqueTemplateName("New template"), ""),
+            CommitTemplate(uniqueTemplateName(message("commit.templates.new")), ""),
         )
         selectAndEdit(row)
     }
@@ -129,7 +130,7 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
         val selected = model.rowAt(table.selectedRow) ?: return
         val row = model.addAfter(
             table.selectedRow,
-            CommitTemplate(uniqueTemplateName("${selected.name} copy"), selected.content),
+            CommitTemplate(uniqueTemplateName(message("commit.templates.copy", selected.name)), selected.content),
         )
         selectAndEdit(row)
     }
@@ -190,7 +191,7 @@ class CommitTemplatesConfigurable : SearchableConfigurable {
 
         override fun getRowCount(): Int = rows.size
         override fun getColumnCount(): Int = 1
-        override fun getColumnName(column: Int): String = "Template"
+        override fun getColumnName(column: Int): String = message("commit.templates.column")
         override fun getValueAt(row: Int, column: Int): Any = rows[row].name
         override fun isCellEditable(row: Int, column: Int): Boolean = !rows[row].isDefault
 
