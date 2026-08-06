@@ -22,7 +22,7 @@ import kotlin.io.path.name
 class TomcatApplicationListener : AppLifecycleListener {
     override fun appStarted() {
         if (!started.compareAndSet(false, true)) return
-        AppExecutorUtil.getAppExecutorService().execute(::configureTomcatServers)
+        AppExecutorUtil.getAppExecutorService().execute(::reapply)
     }
 
     private fun configureTomcatServers() {
@@ -140,6 +140,11 @@ class TomcatApplicationListener : AppLifecycleListener {
         private const val MISE_TIMEOUT_MS = 30_000
         private val logger = Logger.getInstance(TomcatApplicationListener::class.java)
         private val started = AtomicBoolean()
+        private val configurationLock = Any()
+
+        internal fun reapply() = synchronized(configurationLock) {
+            TomcatApplicationListener().configureTomcatServers()
+        }
 
         internal fun parseMiseInstallPaths(json: String): List<Path> = JsonParser.parseString(json).asJsonArray
             .filter { entry ->

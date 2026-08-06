@@ -39,6 +39,14 @@ import java.nio.file.Path
 object NeoRunConfigurationManager {
     private val logger = Logger.getInstance(NeoRunConfigurationManager::class.java)
 
+    fun deleteManaged(project: Project) {
+        val runManager = RunManager.getInstance(project)
+        val managedNames = setOf("webapp + react", "react", "webapp")
+        val configurations = runManager.allSettings.filter { it.name in managedNames }
+        configurations.forEach(runManager::removeConfiguration)
+        logger.info("Deleted ${configurations.size} managed run configuration(s) for '${project.name}'")
+    }
+
     fun configure(project: Project, neoProject: NeoProject) {
         if (project.isDisposed) {
             logger.debug("Run configuration automation skipped for '${project.name}': project is disposed")

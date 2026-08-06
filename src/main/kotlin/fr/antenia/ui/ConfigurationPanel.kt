@@ -1,10 +1,13 @@
 package fr.antenia.ui
 
 import com.intellij.openapi.Disposable
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.io.FileUtil
@@ -13,7 +16,9 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.JBColor
 import com.intellij.ui.JBSplitter
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPasswordField
@@ -26,6 +31,8 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import fr.antenia.automation.AnteniaStartupActions
+import fr.antenia.automation.NeoRunConfigurationManager
 import fr.antenia.config.ConfigurationFiles
 import fr.antenia.config.OrderedProperties
 import fr.antenia.config.OrderedPropertiesCodec
@@ -33,6 +40,7 @@ import fr.antenia.config.ProjectConfigurationState
 import fr.antenia.config.PropertyLine
 import fr.antenia.credentials.GlobalDatabaseSettings
 import fr.antenia.credentials.DatabaseCredentials
+import fr.antenia.credentials.GlobalDatabaseConfigurable
 import fr.antenia.credentials.ProjectDatabaseCredentials
 import fr.antenia.database.DatabaseProfileSynchronizer
 import fr.antenia.database.MysqlConnection
@@ -40,16 +48,20 @@ import fr.antenia.project.DatabaseKeys
 import fr.antenia.project.NeoProject
 import fr.antenia.project.NeoSchema
 import fr.antenia.notifications.AnteniaNotifications
+import fr.antenia.settings.AnteniaConfigurable
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
 import java.awt.FlowLayout
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.DefaultCellEditor
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JComboBox
 import javax.swing.JComponent
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.JPasswordField
 import javax.swing.ListSelectionModel
@@ -75,12 +87,19 @@ class ConfigurationPanel(
     private val databaseForm = schema.database?.let { DatabaseForm(it) }
     private val environmentForm = schema.environmentKey?.let { EnvironmentForm(it) }
     private val status = JBLabel()
+    private val searchField = SearchTextField(false)
+    private val searchStatus = JBLabel()
+    private var searchMatches = emptyList<Int>()
+    private var activeSearchMatch = -1
+    private lateinit var reapplyButton: JButton
+    private lateinit var resetButton: JButton
     private val databaseProfileAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private lateinit var editorSplitter: JBSplitter
     private lateinit var formPane: JComponent
 
     val component: JComponent = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty(8)
+        add(createHeader(), BorderLayout.NORTH)
         add(createEditor(), BorderLayout.CENTER)
         add(status, BorderLayout.SOUTH)
     }
@@ -117,7 +136,7 @@ class ConfigurationPanel(
             .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Add blank", "Add an empty line", com.intellij.icons.AllIcons.Actions.SplitVertically) {
                 override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = addLine(PropertyLine.Blank())
             })
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Reset", "Reset to the default configuration", com.intellij.icons.AllIcons.Actions.Rollback) {
+            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction("Reset file", "Reset this file to the default configuration", com.intellij.icons.AllIcons.Actions.Rollback) {
                 override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = reset()
             })
         formPane = JBScrollPane(cards).apply { border = JBUI.Borders.emptyTop(8) }
@@ -125,6 +144,149 @@ class ConfigurationPanel(
             firstComponent = decorator.createPanel()
         }
         return editorSplitter
+    }
+
+    private fun createHeader(): JComponent {
+        searchField.textEditor.emptyText.text = "Search keys and values"
+        searchField.textEditor.document.onChange { updateSearch(selectFirst = true) }
+        searchField.textEditor.addKeyListener(object : KeyAdapter() {
+            override fun keyPressed(event: KeyEvent) {
+                when {
+                    event.keyCode == KeyEvent.VK_ENTER -> {
+                        navigateSearch(if (event.isShiftDown) -1 else 1)
+                        event.consume()
+                    }
+                    event.keyCode == KeyEvent.VK_ESCAPE && searchField.text.isNotEmpty() -> {
+                        searchField.text = ""
+                        event.consume()
+                    }
+                }
+            }
+        })
+        searchStatus.foreground = UIUtil.getContextHelpForeground()
+
+        val search = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
+            isOpaque = false
+            add(searchField, BorderLayout.CENTER)
+            add(searchStatus, BorderLayout.EAST)
+        }
+        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
+            isOpaque = false
+            add(JButton(AllIcons.General.Settings).apply {
+                toolTipText = "Open Tools > Antenia settings"
+                accessibleContext.accessibleName = "Antenia Settings"
+                isFocusable = false
+                addActionListener { openAnteniaSettings() }
+            })
+            add(JButton(AllIcons.Actions.Refresh).also { button ->
+                reapplyButton = button
+                button.toolTipText = "Run all Antenia startup setup again for this IDE and project"
+                button.accessibleContext.accessibleName = "Reapply Antenia Setup"
+                button.isFocusable = false
+                button.addActionListener { runStartupActions("Startup actions reapplied") }
+            })
+            add(JButton(AllIcons.Actions.Rollback).also { button ->
+                resetButton = button
+                button.toolTipText = "Delete and recreate Antenia-managed project configuration"
+                button.accessibleContext.accessibleName = "Reset Project Setup"
+                button.isFocusable = false
+                button.addActionListener { resetPluginConfiguration() }
+            })
+        }
+        return JPanel(BorderLayout(JBUI.scale(12), 0)).apply {
+            border = JBUI.Borders.emptyBottom(8)
+            add(JBLabel(neoProject.type.displayName).apply {
+                font = font.deriveFont(font.style or java.awt.Font.BOLD)
+            }, BorderLayout.WEST)
+            add(search, BorderLayout.CENTER)
+            add(actions, BorderLayout.EAST)
+        }
+    }
+
+    private fun openAnteniaSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(project, AnteniaConfigurable::class.java)
+    }
+
+    private fun runStartupActions(successMessage: String) {
+        reapplyButton.isEnabled = false
+        resetButton.isEnabled = false
+        UIUtil.setEnabled(editorSplitter, false, true)
+        status.text = "Reapplying Antenia startup actions..."
+        status.foreground = UIUtil.getLabelForeground()
+        AnteniaStartupActions.reapply(project) { succeeded ->
+            if (project.isDisposed) return@reapply
+            reapplyButton.isEnabled = true
+            resetButton.isEnabled = true
+            UIUtil.setEnabled(editorSplitter, true, true)
+            reloadFromDisk()
+            if (succeeded) {
+                status.text = successMessage
+                status.foreground = UIUtil.getLabelForeground()
+            }
+        }
+    }
+
+    private fun resetPluginConfiguration() {
+        val answer = Messages.showYesNoDialog(
+            project,
+            "This deletes Antenia-managed configuration files and the run configurations named " +
+                "'webapp', 'react', and 'webapp + react', then recreates them from defaults. Continue?",
+            "Reset Antenia Project Configuration",
+            Messages.getWarningIcon(),
+        )
+        if (answer != Messages.YES) return
+        changingFile = true
+        try {
+            WriteIntentReadAction.run {
+                ConfigurationFiles.deleteManaged(project, neoProject.type)
+                NeoRunConfigurationManager.deleteManaged(project)
+                state.overrideGlobalCredentials = false
+                ProjectDatabaseCredentials.clear(project)
+            }
+        } catch (exception: Exception) {
+            reportFailure("project-reset", "Antenia project configuration could not be reset", exception)
+            return
+        } finally {
+            changingFile = false
+        }
+        runStartupActions("Antenia project configuration reset")
+    }
+
+    private fun updateSearch(selectFirst: Boolean) {
+        val terms = searchField.text.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+        if (terms.isEmpty()) {
+            searchMatches = emptyList()
+            activeSearchMatch = -1
+            searchStatus.text = ""
+            return
+        }
+        val selectedModelRow = table.selectedRow.takeIf { it >= 0 }
+        searchMatches = (0 until model.rowCount).filter { model.matches(it, terms) }
+        activeSearchMatch = if (!selectFirst && selectedModelRow in searchMatches) {
+            searchMatches.indexOf(selectedModelRow)
+        } else {
+            0
+        }
+        if (searchMatches.isEmpty()) {
+            activeSearchMatch = -1
+            table.clearSelection()
+            searchStatus.text = "No matches"
+        } else {
+            focusSearchMatch(activeSearchMatch)
+        }
+    }
+
+    private fun navigateSearch(direction: Int) {
+        if (searchMatches.isEmpty()) return
+        focusSearchMatch((activeSearchMatch + direction).mod(searchMatches.size))
+    }
+
+    private fun focusSearchMatch(matchIndex: Int) {
+        activeSearchMatch = matchIndex
+        val row = searchMatches[matchIndex]
+        table.selectionModel.setSelectionInterval(row, row)
+        table.scrollRectToVisible(table.getCellRect(row, 0, true))
+        searchStatus.text = "${matchIndex + 1} of ${searchMatches.size}"
     }
 
     private fun addEntry() = addLine(PropertyLine.Entry(nextAvailableKey(), ""))
@@ -191,8 +353,9 @@ class ConfigurationPanel(
         model.load(document)
         databaseForm?.load()
         environmentForm?.load()
+        if (searchField.text.isNotBlank()) updateSearch(selectFirst = false)
         val rowToSelect = selectedRow.takeIf { it in 0 until model.rowCount } ?: model.databaseRow()
-        if (rowToSelect >= 0) {
+        if (searchField.text.isBlank() && rowToSelect >= 0) {
             table.selectionModel.setSelectionInterval(rowToSelect, rowToSelect)
         }
         showSelectedForm()
@@ -284,7 +447,14 @@ class ConfigurationPanel(
         )).apply { isEditable = true }
         private val port = JBTextField("3306")
         private val database = JBTextField()
-        private val override = JBCheckBox("Override global credentials for this project")
+        private val override = JBCheckBox("Override").apply {
+            accessibleContext.accessibleName = "Override global database credentials for this project"
+        }
+        private val globalCredentialsLink = ActionLink("global database credentials") {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, GlobalDatabaseConfigurable::class.java)
+        }.apply {
+            toolTipText = "View or change the credentials used when this override is disabled"
+        }
         private val username = JBTextField()
         private val password = JBPasswordField()
         private var loading = false
@@ -295,7 +465,12 @@ class ConfigurationPanel(
             .addLabeledComponent("Host:", host)
             .addLabeledComponent("Port:", port)
             .addLabeledComponent("Database:", database)
-            .addComponent(override)
+            .addComponent(JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                isOpaque = false
+                add(override)
+                add(globalCredentialsLink)
+                add(JBLabel("for this project"))
+            })
             .addLabeledComponent("Username:", username)
             .addLabeledComponent("Password:", password)
             .addComponentFillVertically(JPanel(), 0)
@@ -487,6 +662,21 @@ private class ConfigurationTableModel(
     fun rowAt(row: Int): LogicalRow? = rows.getOrNull(row)
 
     fun databaseRow(): Int = rows.indexOfFirst { it is LogicalRow.Database }
+
+    fun matches(row: Int, terms: List<String>): Boolean {
+        val item = rows.getOrNull(row) ?: return false
+        val text = buildString {
+            append(getValueAt(row, 0)).append(' ').append(getValueAt(row, 1))
+            item.lines.forEach { line ->
+                when (line) {
+                    is PropertyLine.Entry -> append(' ').append(line.key).append(' ').append(line.value)
+                    is PropertyLine.Comment -> append(' ').append(line.raw)
+                    is PropertyLine.Blank -> Unit
+                }
+            }
+        }
+        return terms.all { text.contains(it, ignoreCase = true) }
+    }
 
     fun addAfter(selected: Int, line: PropertyLine): Int {
         val insertRow = if (selected in rows.indices) selected + 1 else rows.size

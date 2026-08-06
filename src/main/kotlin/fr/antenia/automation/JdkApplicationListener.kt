@@ -30,12 +30,21 @@ internal object JdkAutoConfigurator {
     private val logger = Logger.getInstance(JdkAutoConfigurator::class.java)
     private val started = AtomicBoolean()
     private val completion = CompletableFuture<Unit>()
+    private val configurationLock = Any()
 
     fun configure() {
         if (!started.compareAndSet(false, true)) {
             completion.join()
             return
         }
+        try {
+            reapply()
+        } finally {
+            completion.complete(Unit)
+        }
+    }
+
+    fun reapply() = synchronized(configurationLock) {
         try {
             configureJdks()
         } catch (exception: Exception) {
@@ -46,8 +55,6 @@ internal object JdkAutoConfigurator {
                 "JDK automatic configuration failed",
                 "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
             )
-        } finally {
-            completion.complete(Unit)
         }
     }
 

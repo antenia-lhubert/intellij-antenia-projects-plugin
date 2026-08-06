@@ -33,22 +33,25 @@ class NeoProjectActivity : ProjectActivity {
         scheduleConfiguration(project, "project opened")
     }
 
-    private fun scheduleConfiguration(project: Project, reason: String) {
+    internal fun scheduleConfiguration(project: Project, reason: String, completed: ((Boolean) -> Unit)? = null) {
         logger.info("Scheduling Neo project configuration for '${project.name}': $reason")
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) {
                 logger.info("Neo project configuration cancelled for '${project.name}': project is disposed")
+                completed?.invoke(false)
                 return@invokeLater
             }
             val neoProject = NeoProjectDetector.detect(project)
             if (neoProject == null) {
                 logger.info("Neo project configuration skipped for '${project.name}': no supported root artifact detected")
+                completed?.invoke(false)
                 return@invokeLater
             }
             logger.info(
                 "Detected ${neoProject.type.displayName} project '${project.name}': " +
                     "artifactId=${neoProject.type.artifactId}, java=${neoProject.javaVersion}, react=${neoProject.hasReact}",
             )
+            var succeeded = false
             try {
                 ToolWindowManager.getInstance(project).getToolWindow("Neo Configuration")?.setAvailable(true)
                 logger.info("Enabled Neo Configuration tool window for '${project.name}'")
@@ -58,6 +61,7 @@ class NeoProjectActivity : ProjectActivity {
                 configureProject(project, neoProject)
                 NeoRunConfigurationManager.configure(project, neoProject)
                 logger.info("Completed Neo project configuration for '${project.name}'")
+                succeeded = true
             } catch (exception: Exception) {
                 logger.error("Neo project configuration failed for '${project.name}'", exception)
                 AnteniaNotifications.failure(
@@ -67,6 +71,8 @@ class NeoProjectActivity : ProjectActivity {
                     "${exception.message ?: exception.javaClass.simpleName}. See the IDE log for details.",
                 )
                 throw exception
+            } finally {
+                completed?.invoke(succeeded)
             }
         }
     }

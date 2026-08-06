@@ -75,6 +75,11 @@ object ProjectDatabaseCredentials {
         }
     }
 
+    fun clear(project: Project) {
+        PasswordSafe.instance.set(attributes(project), null)
+        logger.info("Cleared project database credentials for '${project.name}'")
+    }
+
     private fun attributes(project: Project): CredentialAttributes = CredentialAttributes(
         "fr.antenia.antenia-projects.project-database.${project.locationHash}",
     )

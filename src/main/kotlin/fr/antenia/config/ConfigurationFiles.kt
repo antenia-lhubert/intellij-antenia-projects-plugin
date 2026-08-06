@@ -70,6 +70,25 @@ object ConfigurationFiles {
         return path
     }
 
+    fun deleteManaged(project: Project, type: NeoProjectType) {
+        val directory = propertyPath(project, type).parent
+        val fileNames = when (type) {
+            NeoProjectType.CORE -> listOf(type.configurationFile, "novaLog.xml")
+            NeoProjectType.GED -> listOf(type.configurationFile, "gedLog.xml")
+            NeoProjectType.SELFCARE -> listOf(type.configurationFile)
+        }
+        fileNames.forEach { fileName ->
+            val path = directory.resolve(fileName)
+            val virtualFile = LocalFileSystem.getInstance().findFileByNioFile(path)
+            if (virtualFile != null) {
+                ApplicationManager.getApplication().runWriteAction { virtualFile.delete(ConfigurationFiles) }
+            } else {
+                Files.deleteIfExists(path)
+            }
+        }
+        logger.info("Deleted managed ${type.displayName} configuration files from $directory")
+    }
+
     private fun copyTemplateIfMissing(resource: String, destination: Path) {
         if (Files.exists(destination)) return
         javaClass.getResourceAsStream(resource)!!.use { Files.copy(it, destination) }
