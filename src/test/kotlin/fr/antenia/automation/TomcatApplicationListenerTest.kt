@@ -60,6 +60,16 @@ class TomcatApplicationListenerTest {
         )
     }
 
+    @Test
+    fun `increments mise suffix when application server library name already exists`() {
+        val home = Path.of("C:\\Users\\developer\\AppData\\Local\\mise\\installs\\tomcat\\10.1.57\\apache-tomcat-10.1.57")
+
+        assertEquals(
+            "Tomcat 10.1.57 (mise) (2)",
+            TomcatApplicationListener.serverName("10.1.57", home, setOf("Tomcat 10.1.57 (mise)")),
+        )
+    }
+
     private fun createTomcatHome(home: Path): Path {
         Files.createDirectories(home.resolve("bin"))
         Files.createDirectories(home.resolve("conf"))

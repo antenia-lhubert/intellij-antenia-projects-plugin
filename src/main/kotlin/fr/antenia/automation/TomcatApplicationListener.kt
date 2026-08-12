@@ -71,7 +71,11 @@ class TomcatApplicationListener : AppLifecycleListener {
         version: String,
         home: Path,
     ): ApplicationServer {
-        val name = serverName(version, home, manager.applicationServers.map { it.name }.toSet())
+        val existingNames = buildSet {
+            manager.applicationServers.mapTo(this) { it.name }
+            manager.libraryTable.libraries.mapNotNullTo(this) { it.name }
+        }
+        val name = serverName(version, home, existingNames)
         val libraries = integration.applicationServerHelper.getApplicationServerInfo(data).defaultLibraries
         val model = manager.createModifiableModel()
         try {
