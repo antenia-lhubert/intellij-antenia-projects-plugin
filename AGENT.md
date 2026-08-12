@@ -2,7 +2,7 @@
 
 ## Project Purpose
 
-This repository contains **Antenia Projects**, an IntelliJ IDEA Ultimate plugin that configures and runs Antenia Neo Maven/Tomcat projects. The plugin is written in Kotlin and targets IntelliJ IDEA Ultimate 2025.3.5 through the IntelliJ Platform Gradle Plugin.
+This repository contains **Antenia Projects**, an IntelliJ IDEA Ultimate plugin that configures and runs Antenia Neo Maven/Tomcat projects. The plugin is written in Kotlin and targets IntelliJ IDEA Ultimate 2026.2.1 through the IntelliJ Platform Gradle Plugin.
 
 Read [`spec/`](spec/) before changing behavior. The specification is the only source of truth; implementation and documentation must follow it. If code and spec disagree, implement the spec rather than preserving accidental behavior. Do not change the spec merely to match the current code unless the product requirement itself has intentionally changed.
 

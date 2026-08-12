@@ -12,7 +12,7 @@ dependencies {
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
-        intellijIdea("2026.2.0.1")
+        intellijIdea("2026.2.1")
         testFramework(TestFrameworkType.Platform)
 
         // Add plugin dependencies for compilation here:
@@ -26,5 +26,16 @@ dependencies {
         bundledPlugin("com.intellij.properties")
         bundledPlugin("org.intellij.plugins.markdown")
         bundledPlugin("com.intellij.database")
+        plugin("Subversion:262.9437.214")
+        plugin("com.intellij.jsp:262.9437.22")
+    }
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "262.9437"
+            untilBuild = provider { null }
+        }
     }
 }

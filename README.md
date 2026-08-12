@@ -10,7 +10,7 @@ Antenia Projects is an IntelliJ IDEA Ultimate plugin for configuring and running
 4. Return to the **Marketplace** tab and search for **Antenia Projects**.
 5. Install the plugin and restart IntelliJ IDEA when prompted.
 
-IntelliJ IDEA will use the same repository to discover future plugin updates automatically.
+IntelliJ IDEA will use the same repository to discover future plugin updates automatically. Its plugin manager will also offer to install or enable the required **Subversion** and **Jakarta EE: Server Pages (JSP)** plugins from JetBrains Marketplace.
 
 ## Supported Projects
 
@@ -96,7 +96,7 @@ The compound configuration opens the application through `https://localhost:8888
 
 ## Installation
 
-This plugin requires IntelliJ IDEA Ultimate because it uses the Tomcat, Java EE, JavaScript, Maven, and Database integrations bundled with Ultimate.
+This plugin requires IntelliJ IDEA Ultimate 2026.2.1 or later because it uses the Tomcat, Java EE, JavaScript, Maven, and Database integrations. It also requires the independently distributed **Subversion** and **Jakarta EE: Server Pages (JSP)** plugins; IntelliJ's plugin manager installs or enables compatible versions during installation.
 
 To install the plugin and receive updates from this repository:
 
@@ -113,7 +113,7 @@ Compatible JDK installations must be configured in the IDE for automatic selecti
 
 ## Development
 
-The project uses Kotlin, Gradle, and the IntelliJ Platform Gradle Plugin. The current development platform is IntelliJ IDEA Ultimate 2025.3.5.
+The project uses Kotlin, Gradle, and the IntelliJ Platform Gradle Plugin. The current development platform is IntelliJ IDEA Ultimate 2026.2.1.
 
 ```shell
 # Run unit tests and checks
