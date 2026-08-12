@@ -26,7 +26,10 @@ class NeoProjectActivity : ProjectActivity {
     private val logger = Logger.getInstance(NeoProjectActivity::class.java)
 
     override suspend fun execute(project: Project) {
-        withContext(Dispatchers.IO) { JdkAutoConfigurator.configure() }
+        withContext(Dispatchers.IO) {
+            JdkAutoConfigurator.configure()
+            TomcatApplicationListener.configure()
+        }
         logger.info("Installing Neo project automation for '${project.name}'")
         MavenProjectsManager.getInstance(project).addManagerListener(object : MavenProjectsManager.Listener {
             override fun projectImportCompleted() = scheduleConfiguration(project, "Maven import completed")

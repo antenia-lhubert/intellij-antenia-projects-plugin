@@ -17,13 +17,13 @@ import org.jetbrains.idea.tomcat.server.TomcatIntegration
 import org.jetbrains.idea.tomcat.server.TomcatPersistentData
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.name
 
 class TomcatApplicationListener : AppLifecycleListener {
     override fun appStarted() {
-        if (!started.compareAndSet(false, true)) return
-        AppExecutorUtil.getAppExecutorService().execute(::reapply)
+        AppExecutorUtil.getAppExecutorService().execute(::configure)
     }
 
     private fun configureTomcatServers() {
@@ -141,7 +141,20 @@ class TomcatApplicationListener : AppLifecycleListener {
         private const val MISE_TIMEOUT_MS = 30_000
         private val logger = Logger.getInstance(TomcatApplicationListener::class.java)
         private val started = AtomicBoolean()
+        private val completion = CompletableFuture<Unit>()
         private val configurationLock = Any()
+
+        internal fun configure() {
+            if (!started.compareAndSet(false, true)) {
+                completion.join()
+                return
+            }
+            try {
+                reapply()
+            } finally {
+                completion.complete(Unit)
+            }
+        }
 
         internal fun reapply() = synchronized(configurationLock) {
             TomcatApplicationListener().configureTomcatServers()
