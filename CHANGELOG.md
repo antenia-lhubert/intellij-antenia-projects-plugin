@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Added
+
+- Configure project-scoped Java import ordering and trailing-space preservation for Neo projects, with project-aware encodings.
+
 ## [1.0.5-SNAPSHOT] - 2026-08-13
 
 ### Added

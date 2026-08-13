@@ -26,6 +26,7 @@ class NeoProjectActivity : ProjectActivity {
     private val logger = Logger.getInstance(NeoProjectActivity::class.java)
 
     override suspend fun execute(project: Project) {
+        CodingStyleConfigurator.configure(project)
         withContext(Dispatchers.IO) {
             JdkAutoConfigurator.configure()
             TomcatApplicationListener.configure()
