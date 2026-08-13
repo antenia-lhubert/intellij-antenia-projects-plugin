@@ -7,6 +7,8 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+## [1.0.6-SNAPSHOT] - 2026-08-13
+
 ### Added
 
 - Configure project-scoped Java import ordering and trailing-space preservation for Neo projects, with project-aware encodings.
@@ -106,7 +108,8 @@ Version names retain the snapshot identifiers used by the repository.
 - Create the initial IntelliJ Platform plugin scaffold.
 - Add the generated demonstration tool window and build, test, and verification configurations.
 
-[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.5-SNAPSHOT...HEAD
+[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.6-SNAPSHOT...HEAD
+[1.0.6-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.5-SNAPSHOT...v1.0.6-SNAPSHOT
 [1.0.5-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.4-SNAPSHOT...v1.0.5-SNAPSHOT
 [1.0.4-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.3-SNAPSHOT...v1.0.4-SNAPSHOT
 [1.0.3-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.2-SNAPSHOT...v1.0.3-SNAPSHOT
