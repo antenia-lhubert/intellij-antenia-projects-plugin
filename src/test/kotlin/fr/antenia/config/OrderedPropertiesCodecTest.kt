@@ -40,6 +40,26 @@ class OrderedPropertiesCodecTest {
     }
 
     @Test
+    fun `uses the last duplicate value and preserves every occurrence`() {
+        val document = OrderedPropertiesCodec.parse("key=first\nother=value\nkey=last\n")
+
+        assertEquals("last", document.value("key"))
+
+        document.setValue("key", "updated")
+
+        assertEquals("key=first\nother=value\nkey=updated\n", OrderedPropertiesCodec.render(document))
+    }
+
+    @Test
+    fun `regroups identical duplicate entries without losing either line`() {
+        val document = OrderedPropertiesCodec.parse("a=1\nkey=value\nb=2\nkey=value\nc=3\n")
+
+        document.regroup(setOf("key"))
+
+        assertEquals("a=1\nkey=value\nkey=value\nb=2\nc=3\n", OrderedPropertiesCodec.render(document))
+    }
+
+    @Test
     fun `renders changed values as valid properties`() {
         val document = OrderedPropertiesCodec.parse("key=value\n")
         document.setValue("space key", " leading=value")
@@ -48,6 +68,25 @@ class OrderedPropertiesCodecTest {
         val reparsed = OrderedPropertiesCodec.parse(rendered)
 
         assertEquals(" leading=value", reparsed.value("space key"))
+    }
+
+    @Test
+    fun `comments and uncomments key value properties`() {
+        val entry = PropertyLine.Entry("space key", " leading=value")
+
+        val comment = OrderedPropertiesCodec.comment(entry)
+        val uncommented = OrderedPropertiesCodec.uncomment(comment)
+
+        assertEquals("# space\\ key=\\ leading=value", comment.raw)
+        assertEquals(entry, uncommented)
+        assertEquals(PropertyLine.Entry("key", "value"), OrderedPropertiesCodec.uncomment(PropertyLine.Comment("! key : value")))
+    }
+
+    @Test
+    fun `does not interpret prose comments as properties`() {
+        assertEquals(null, OrderedPropertiesCodec.uncomment(PropertyLine.Comment("# database settings")))
+        assertEquals(null, OrderedPropertiesCodec.uncomment(PropertyLine.Comment("# URL uses x=y")))
+        assertEquals(null, OrderedPropertiesCodec.uncomment(PropertyLine.Comment("# =missing key")))
     }
 
     @Test

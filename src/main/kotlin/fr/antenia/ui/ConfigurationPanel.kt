@@ -3,13 +3,25 @@ package fr.antenia.ui
 import com.intellij.openapi.Disposable
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.actionSystem.SplitButtonAction
+import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.ComponentValidator
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -18,6 +30,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -53,24 +66,20 @@ import fr.antenia.settings.AnteniaConfigurable
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
-import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.EventObject
 import javax.swing.DefaultCellEditor
-import javax.swing.DefaultComboBoxModel
-import javax.swing.Icon
-import javax.swing.JComboBox
 import javax.swing.JComponent
-import javax.swing.JButton
 import javax.swing.JPanel
-import javax.swing.JPasswordField
 import javax.swing.ListSelectionModel
-import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent as SwingDocumentEvent
 import javax.swing.event.DocumentListener as SwingDocumentListener
+import javax.swing.event.TableModelEvent
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 
@@ -85,7 +94,27 @@ class ConfigurationPanel(
     private lateinit var file: Path
     private var changingFile = false
     private var model = ConfigurationTableModel(schema, ::persist)
-    private val table = JBTable(model)
+    private val table = object : JBTable(model) {
+        private var mousePressedOnSelectedRow = false
+
+        override fun processMouseEvent(event: MouseEvent) {
+            if (event.id == MouseEvent.MOUSE_PRESSED) {
+                mousePressedOnSelectedRow = selectedRow == rowAtPoint(event.point)
+            }
+            super.processMouseEvent(event)
+        }
+
+        override fun editCellAt(row: Int, column: Int, event: EventObject?): Boolean {
+            if (event is MouseEvent && !mousePressedOnSelectedRow) return false
+            return super.editCellAt(row, column, event)
+        }
+
+        override fun tableChanged(event: TableModelEvent?) {
+            val selected = selectionModel?.minSelectionIndex ?: -1
+            super.tableChanged(event)
+            if (selected in 0 until rowCount) selectionModel.setSelectionInterval(selected, selected)
+        }
+    }
     private val cards = JPanel(CardLayout())
     private val databaseForm = schema.database?.let { DatabaseForm(it) }
     private val environmentForm = schema.environmentKey?.let { EnvironmentForm(it) }
@@ -94,8 +123,7 @@ class ConfigurationPanel(
     private val searchStatus = JBLabel()
     private var searchMatches = emptyList<Int>()
     private var activeSearchMatch = -1
-    private lateinit var reapplyButton: JButton
-    private lateinit var resetButton: JButton
+    private var setupRunning = false
     private val databaseProfileAlarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private lateinit var editorSplitter: JBSplitter
     private lateinit var formPane: JComponent
@@ -110,15 +138,27 @@ class ConfigurationPanel(
     init {
         table.selectionModel.selectionMode = ListSelectionModel.SINGLE_SELECTION
         table.setShowGrid(false)
-        table.emptyText.text = message("configuration.empty")
+        table.tableHeader.reorderingAllowed = false
+        table.autoResizeMode = javax.swing.JTable.AUTO_RESIZE_LAST_COLUMN
+        table.putClientProperty("terminateEditOnFocusLost", true)
+        table.emptyText
+            .appendText(message("configuration.empty"))
+            .appendLine("")
+            .appendText(message("configuration.empty.action"), com.intellij.ui.SimpleTextAttributes.LINK_ATTRIBUTES) { addEntry() }
+        table.accessibleContext.accessibleName = message("configuration.table.accessible.name")
+        table.accessibleContext.accessibleDescription = message("configuration.table.accessible.description")
         table.columnModel.getColumn(0).preferredWidth = 220
+        table.columnModel.getColumn(0).minWidth = 120
         table.columnModel.getColumn(1).preferredWidth = 500
-        table.columnModel.getColumn(0).cellEditor = DefaultCellEditor(JComboBox<String>().apply {
+        table.columnModel.getColumn(1).minWidth = 130
+        table.columnModel.getColumn(0).cellEditor = DefaultCellEditor(ComboBox(schema.knownKeys.toTypedArray()).apply {
             isEditable = true
-            model = DefaultComboBoxModel(schema.knownKeys.toTypedArray())
-        })
+            accessibleContext.accessibleName = message("configuration.key.editor.accessible.name")
+        }).apply { clickCountToStart = 1 }
+        table.columnModel.getColumn(1).cellEditor = DefaultCellEditor(JBTextField()).apply { clickCountToStart = 1 }
         table.setDefaultRenderer(Any::class.java, RowRenderer())
         table.selectionModel.addListSelectionListener { showSelectedForm() }
+        RowReorderSupport.install(table, ::moveRow)
         reloadFromDisk()
         installFileListeners()
     }
@@ -129,24 +169,72 @@ class ConfigurationPanel(
         databaseForm?.let { cards.add(it.component, "database") }
         environmentForm?.let { cards.add(it.component, "environment") }
         val decorator = ToolbarDecorator.createDecorator(table)
-            .setAddAction { addEntry() }
+            .disableAddAction()
             .setRemoveAction { removeSelected() }
+            .setRemoveActionUpdater { model.canRemove(table.selectedRow) }
             .setMoveUpAction { moveSelected(-1) }
+            .setMoveUpActionUpdater { model.canMove(table.selectedRow, -1) }
             .setMoveDownAction { moveSelected(1) }
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.add.comment"), message("configuration.action.add.comment.description"), com.intellij.icons.AllIcons.FileTypes.Text) {
-                override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = addLine(PropertyLine.Comment("# "))
+            .setMoveDownActionUpdater { model.canMove(table.selectedRow, 1) }
+            .addExtraAction(createAddAction())
+            .addExtraAction(object : AnAction(message("configuration.action.duplicate"), message("configuration.action.duplicate.description"), AllIcons.Actions.Copy) {
+                override fun actionPerformed(event: AnActionEvent) = duplicateSelected()
+
+                override fun update(event: AnActionEvent) {
+                    event.presentation.isEnabled = model.canDuplicate(table.selectedRow)
+                }
+
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.add.blank"), message("configuration.action.add.blank.description"), com.intellij.icons.AllIcons.Actions.SplitVertically) {
-                override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = addLine(PropertyLine.Blank())
+            .addExtraAction(object : AnAction(message("configuration.action.toggle.comment"), message("configuration.action.toggle.comment.description"), AllIcons.Actions.InlayRenameInComments) {
+                override fun actionPerformed(event: AnActionEvent) {
+                    val row = table.selectedRow
+                    if (model.toggleComment(row)) {
+                        selectRow(row)
+                        showSelectedForm()
+                    }
+                }
+
+                override fun update(event: AnActionEvent) {
+                    event.presentation.isEnabled = model.canToggleComment(table.selectedRow)
+                }
+
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
-            .addExtraAction(object : com.intellij.openapi.actionSystem.AnAction(message("configuration.action.reset.file"), message("configuration.action.reset.file.description"), com.intellij.icons.AllIcons.Actions.Rollback) {
-                override fun actionPerformed(event: com.intellij.openapi.actionSystem.AnActionEvent) = reset()
+            .addExtraAction(object : AnAction(message("configuration.action.reset.file"), message("configuration.action.reset.file.description"), AllIcons.Actions.Rollback) {
+                override fun actionPerformed(event: AnActionEvent) = reset()
             })
+            .setButtonComparator(message("configuration.action.add"))
         formPane = JBScrollPane(cards).apply { border = JBUI.Borders.emptyTop(8) }
         editorSplitter = JBSplitter(true, 0.67f).apply {
             firstComponent = decorator.createPanel()
         }
         return editorSplitter
+    }
+
+    private fun createAddAction(): AnAction {
+        val group = DefaultActionGroup(message("configuration.action.add"), true).apply {
+            templatePresentation.icon = AllIcons.General.Add
+            add(object : AnAction(message("configuration.action.add.property"), message("configuration.action.add.property.description"), AllIcons.Actions.Properties) {
+                override fun actionPerformed(event: AnActionEvent) = addEntry()
+            })
+            add(object : AnAction(message("configuration.action.add.comment"), message("configuration.action.add.comment.description"), AllIcons.FileTypes.Text) {
+                override fun actionPerformed(event: AnActionEvent) = addLine(PropertyLine.Comment("# "))
+            })
+            add(object : AnAction(message("configuration.action.add.blank"), message("configuration.action.add.blank.description"), AllIcons.Actions.SplitVertically) {
+                override fun actionPerformed(event: AnActionEvent) = addLine(PropertyLine.Blank())
+            })
+        }
+        return object : SplitButtonAction(group) {
+            override fun update(event: AnActionEvent) {
+                super.update(event)
+                event.presentation.icon = AllIcons.General.Add
+            }
+        }.apply {
+            templatePresentation.text = message("configuration.action.add")
+            templatePresentation.description = message("configuration.action.add.description")
+            templatePresentation.icon = AllIcons.General.Add
+        }
     }
 
     private fun createHeader(): JComponent {
@@ -173,29 +261,25 @@ class ConfigurationPanel(
             add(searchField, BorderLayout.CENTER)
             add(searchStatus, BorderLayout.EAST)
         }
-        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
-            isOpaque = false
-            add(createSquareIconButton(AllIcons.General.Settings).apply {
-                toolTipText = message("configuration.settings.tooltip")
-                accessibleContext.accessibleName = message("configuration.settings.accessible.name")
-                isFocusable = false
-                addActionListener { openAnteniaSettings() }
+        val actionGroup = DefaultActionGroup().apply {
+            add(object : AnAction(message("configuration.settings.accessible.name"), message("configuration.settings.tooltip"), AllIcons.General.Settings) {
+                override fun actionPerformed(event: AnActionEvent) = openAnteniaSettings()
             })
-            add(createSquareIconButton(AllIcons.Actions.Refresh).also { button ->
-                reapplyButton = button
-                button.toolTipText = message("configuration.reapply.tooltip")
-                button.accessibleContext.accessibleName = message("configuration.reapply.accessible.name")
-                button.isFocusable = false
-                button.addActionListener { runStartupActions(message("configuration.reapply.success")) }
+            add(Separator.getInstance())
+            add(object : AnAction(message("configuration.reapply.accessible.name"), message("configuration.reapply.tooltip"), AllIcons.Actions.Refresh) {
+                override fun actionPerformed(event: AnActionEvent) = runStartupActions(message("configuration.reapply.success"))
+                override fun update(event: AnActionEvent) { event.presentation.isEnabled = !setupRunning }
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
-            add(createSquareIconButton(AllIcons.Actions.Rollback).also { button ->
-                resetButton = button
-                button.toolTipText = message("configuration.project.reset.tooltip")
-                button.accessibleContext.accessibleName = message("configuration.project.reset.accessible.name")
-                button.isFocusable = false
-                button.addActionListener { resetPluginConfiguration() }
+            add(object : AnAction(message("configuration.project.reset.accessible.name"), message("configuration.project.reset.tooltip"), AllIcons.Actions.Rollback) {
+                override fun actionPerformed(event: AnActionEvent) = resetPluginConfiguration()
+                override fun update(event: AnActionEvent) { event.presentation.isEnabled = !setupRunning }
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
         }
+        val actions = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_TITLE, actionGroup, true).apply {
+            targetComponent = table
+        }.component
         return JPanel(BorderLayout(JBUI.scale(12), 0)).apply {
             border = JBUI.Borders.emptyBottom(8)
             add(JBLabel(neoProject.type.displayName).apply {
@@ -206,29 +290,28 @@ class ConfigurationPanel(
         }
     }
 
-    private fun createSquareIconButton(icon: Icon) = JButton(icon).apply {
-        preferredSize = Dimension(preferredSize.height, preferredSize.height)
-    }
-
     private fun openAnteniaSettings() {
         ShowSettingsUtil.getInstance().showSettingsDialog(project, AnteniaConfigurable::class.java)
     }
 
     private fun runStartupActions(successMessage: String) {
-        reapplyButton.isEnabled = false
-        resetButton.isEnabled = false
+        setupRunning = true
         UIUtil.setEnabled(editorSplitter, false, true)
+        status.icon = AnimatedIcon.Default()
         status.text = message("configuration.reapply.progress")
         status.foreground = UIUtil.getLabelForeground()
         AnteniaStartupActions.reapply(project) { succeeded ->
             if (project.isDisposed) return@reapply
-            reapplyButton.isEnabled = true
-            resetButton.isEnabled = true
+            setupRunning = false
+            status.icon = null
             UIUtil.setEnabled(editorSplitter, true, true)
             reloadFromDisk()
             if (succeeded) {
                 status.text = successMessage
                 status.foreground = UIUtil.getLabelForeground()
+            } else {
+                status.text = message("configuration.reapply.failure")
+                status.foreground = JBColor.RED
             }
         }
     }
@@ -299,14 +382,35 @@ class ConfigurationPanel(
 
     private fun addLine(line: PropertyLine) {
         val row = model.addAfter(table.selectedRow, line)
+        ApplicationManager.getApplication().invokeLater({
+            if (row !in 0 until model.rowCount) return@invokeLater
+            selectRow(row)
+            table.requestFocusInWindow()
+            if (line is PropertyLine.Entry && table.editCellAt(row, 0)) {
+                table.editorComponent?.requestFocusInWindow()
+            }
+        }, ModalityState.defaultModalityState())
+    }
+
+    private fun selectRow(row: Int) {
+        if (row !in 0 until model.rowCount) return
         table.selectionModel.setSelectionInterval(row, row)
-        if (line is PropertyLine.Entry) table.editCellAt(row, 0)
+        table.scrollRectToVisible(table.getCellRect(row, 0, true))
     }
 
     private fun removeSelected() {
         val row = table.selectedRow
+        if (table.isEditing) {
+            table.cellEditor.cancelCellEditing()
+            table.removeEditor()
+        }
         if (row < 0 || !model.remove(row)) return
-        if (model.rowCount > 0) table.selectionModel.setSelectionInterval(row.coerceAtMost(model.rowCount - 1), row.coerceAtMost(model.rowCount - 1))
+        if (model.rowCount > 0) selectRow((row - 1).coerceAtLeast(0))
+    }
+
+    private fun duplicateSelected() {
+        val row = model.duplicate(table.selectedRow)
+        if (row >= 0) selectRow(row)
     }
 
     private fun moveSelected(direction: Int) {
@@ -314,9 +418,25 @@ class ConfigurationPanel(
         if (destination >= 0) table.selectionModel.setSelectionInterval(destination, destination)
     }
 
+    private fun moveRow(source: Int, insertion: Int): Boolean {
+        val destination = model.moveTo(source, insertion)
+        if (destination < 0) return false
+        table.selectionModel.setSelectionInterval(destination, destination)
+        table.scrollRectToVisible(table.getCellRect(destination, 0, true))
+        return true
+    }
+
     private fun nextAvailableKey(): String = schema.knownKeys.firstOrNull { key ->
         key !in schema.specialKeys && document.lines.filterIsInstance<PropertyLine.Entry>().none { it.key == key }
-    } ?: "new.key"
+    } ?: uniquePlaceholderKey()
+
+    private fun uniquePlaceholderKey(): String {
+        val keys = document.lines.filterIsInstance<PropertyLine.Entry>().mapTo(mutableSetOf()) { it.key }
+        if ("new.key" !in keys) return "new.key"
+        var suffix = 2
+        while ("new.key.$suffix" in keys) suffix++
+        return "new.key.$suffix"
+    }
 
     private fun reset() {
         if (Messages.showYesNoDialog(
@@ -343,7 +463,9 @@ class ConfigurationPanel(
             file = ConfigurationFiles.ensureCreated(project, neoProject.type)
             load(ConfigurationFiles.read(file))
             DatabaseProfileSynchronizer.update(project, neoProject)
-            status.text = "${neoProject.type.displayName} | $file"
+            val relativeFile = project.basePath?.let { runCatching { Path.of(it).relativize(file) }.getOrNull() } ?: file.fileName
+            status.text = "${neoProject.type.displayName} | $relativeFile"
+            status.toolTipText = file.toString()
         }.onFailure {
             logger.warn("Unable to load Neo configuration for '${project.name}'", it)
             AnteniaNotifications.failure(
@@ -452,7 +574,7 @@ class ConfigurationPanel(
     }
 
     private inner class DatabaseForm(private val keys: DatabaseKeys) {
-        private val host = JComboBox(arrayOf(
+        private val host = ComboBox(arrayOf(
             "antenia-dev-mysql5.leaderinfo.com",
             "antenia-dev-mysql8.leaderinfo.com",
             "mysql8-4-5-dev.antenia.com",
@@ -489,6 +611,13 @@ class ConfigurationPanel(
             .panel.apply { border = JBUI.Borders.empty(12) }
 
         init {
+            ComponentValidator(this@ConfigurationPanel)
+                .withValidator {
+                    val value = port.text.toIntOrNull()
+                    if (value == null || value !in 1..65535) ValidationInfo(message("configuration.database.port.validation"), port) else null
+                }
+                .andRegisterOnDocumentListener(port)
+                .installOn(port)
             host.addActionListener { update() }
             override.addActionListener {
                 if (loading) return@addActionListener
@@ -560,7 +689,7 @@ class ConfigurationPanel(
         private fun update() {
             if (loading) return
             val selectedHost = host.editor.item?.toString().orEmpty()
-            val selectedPort = port.text.toIntOrNull() ?: 3306
+            val selectedPort = port.text.toIntOrNull()?.takeIf { it in 1..65535 } ?: return
             val selectedDatabase = database.text
             document.setValue(keys.url, MysqlConnection.build(selectedHost, selectedPort, selectedDatabase, query))
             keys.database?.let { document.setValue(it, selectedDatabase) }
@@ -574,7 +703,7 @@ class ConfigurationPanel(
     }
 
     private inner class EnvironmentForm(private val key: String) {
-        private val environment = JComboBox(arrayOf("DEV", "TEST", "RECETTE", "PROD")).apply { isEditable = true }
+        private val environment = ComboBox(arrayOf("DEV", "TEST", "RECETTE", "PROD")).apply { isEditable = true }
         private var loading = false
         val component: JComponent = FormBuilder.createFormBuilder()
             .addComponent(JBLabel(message("configuration.environment.title")).apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
@@ -603,6 +732,7 @@ class ConfigurationPanel(
         override fun getTableCellRendererComponent(table: javax.swing.JTable, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
             val component = super.getTableCellRendererComponent(table, value, selected, focus, row, column)
             val item = model.rowAt(row)
+            val duplicateKeys = model.duplicateKeys(row)
             val emptyValue = item is LogicalRow.Entry && column == 1 && item.line.value.isEmpty()
             font = when {
                 item is LogicalRow.Database || item is LogicalRow.Environment -> table.font.deriveFont(java.awt.Font.BOLD)
@@ -610,6 +740,10 @@ class ConfigurationPanel(
                 else -> table.font.deriveFont(java.awt.Font.PLAIN)
             }
             if (emptyValue) text = message("configuration.value.empty")
+            icon = if (column == 0 && duplicateKeys.isNotEmpty()) AllIcons.General.Warning else null
+            toolTipText = duplicateKeys.takeIf { it.isNotEmpty() }?.let {
+                message("configuration.duplicate.keys.warning", it.joinToString(", "))
+            }
             foreground = when {
                 selected -> table.selectionForeground
                 item is LogicalRow.Comment || item is LogicalRow.Blank || emptyValue -> UIUtil.getContextHelpForeground()
@@ -661,8 +795,12 @@ private class ConfigurationTableModel(
         is LogicalRow.Entry -> if (column == 0) item.line.key else item.line.value
         is LogicalRow.Comment -> if (column == 0) message("configuration.row.comment") else item.line.raw.trimStart('#', '!', ' ')
         is LogicalRow.Blank -> if (column == 0) message("configuration.row.blank") else ""
-        is LogicalRow.Database -> if (column == 0) message("configuration.row.database") else message("configuration.row.edit.form")
-        is LogicalRow.Environment -> if (column == 0) message("configuration.row.environment") else message("configuration.row.edit.form")
+        is LogicalRow.Database -> if (column == 0) message("configuration.row.database") else {
+            item.lines.filterIsInstance<PropertyLine.Entry>().lastOrNull { it.key == schema.database?.url }?.value.orEmpty()
+        }
+        is LogicalRow.Environment -> if (column == 0) message("configuration.row.environment") else {
+            item.lines.filterIsInstance<PropertyLine.Entry>().lastOrNull()?.value.orEmpty()
+        }
     }
 
     override fun setValueAt(value: Any?, row: Int, column: Int) {
@@ -678,6 +816,38 @@ private class ConfigurationTableModel(
     fun rowAt(row: Int): LogicalRow? = rows.getOrNull(row)
 
     fun databaseRow(): Int = rows.indexOfFirst { it is LogicalRow.Database }
+
+    fun duplicateKeys(row: Int): List<String> {
+        val keys = rows.getOrNull(row)?.lines?.filterIsInstance<PropertyLine.Entry>()?.map { it.key }.orEmpty()
+        if (keys.isEmpty()) return emptyList()
+        val counts = document.lines.filterIsInstance<PropertyLine.Entry>().groupingBy { it.key }.eachCount()
+        return keys.distinct().filter { counts.getOrDefault(it, 0) > 1 }
+    }
+
+    fun canRemove(row: Int): Boolean = rows.getOrNull(row).let { it != null && it !is LogicalRow.Database && it !is LogicalRow.Environment }
+
+    fun canDuplicate(row: Int): Boolean = canRemove(row)
+
+    fun canMove(row: Int, direction: Int): Boolean = row in rows.indices && row + direction in rows.indices
+
+    fun canToggleComment(row: Int): Boolean = when (val item = rows.getOrNull(row)) {
+        is LogicalRow.Entry -> true
+        is LogicalRow.Comment -> OrderedPropertiesCodec.uncomment(item.line) != null
+        else -> false
+    }
+
+    fun toggleComment(row: Int): Boolean {
+        val item = rows.getOrNull(row) ?: return false
+        val replacement = when (item) {
+            is LogicalRow.Entry -> OrderedPropertiesCodec.comment(item.line)
+            is LogicalRow.Comment -> OrderedPropertiesCodec.uncomment(item.line) ?: return false
+            else -> return false
+        }
+        replaceLine(item.lines.single(), replacement)
+        load(document)
+        changed()
+        return true
+    }
 
     fun matches(row: Int, terms: List<String>): Boolean {
         val item = rows.getOrNull(row) ?: return false
@@ -705,11 +875,25 @@ private class ConfigurationTableModel(
 
     fun remove(row: Int): Boolean {
         val item = rows.getOrNull(row) ?: return false
-        if (item is LogicalRow.Database || item is LogicalRow.Environment) return false
-        document.lines.removeAll(item.lines.toSet())
+        if (!canRemove(row)) return false
+        item.lines.forEach { line ->
+            val index = document.lines.indexOfFirst { it === line }
+            if (index >= 0) document.lines.removeAt(index)
+        }
         load(document)
         changed()
         return true
+    }
+
+    fun duplicate(row: Int): Int {
+        if (!canDuplicate(row)) return -1
+        val line = rows[row].lines.single()
+        val duplicate = when (line) {
+            is PropertyLine.Entry -> line.copy()
+            is PropertyLine.Comment -> line.copy()
+            is PropertyLine.Blank -> line.copy()
+        }
+        return addAfter(row, duplicate)
     }
 
     fun move(row: Int, direction: Int): Int {
@@ -723,8 +907,17 @@ private class ConfigurationTableModel(
         return destination
     }
 
+    fun moveTo(row: Int, insertion: Int): Int {
+        val blocks = rows.map { it.lines }.toMutableList()
+        val destination = RowMove.move(blocks, row, insertion)
+        if (destination < 0) return -1
+        rebuild(blocks)
+        changed()
+        return destination
+    }
+
     private fun replaceLine(old: PropertyLine, replacement: PropertyLine) {
-        val index = document.lines.indexOf(old)
+        val index = document.lines.indexOfFirst { it === old }
         if (index >= 0) document.lines[index] = replacement
     }
 

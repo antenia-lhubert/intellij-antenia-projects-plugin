@@ -15,3 +15,5 @@ Make sure it always respects it.
 Avoid `hacks` and prefer using official APIs.
 
 Configuration files should be placed in a `.local/` folder at project root.
+
+Please always respect IntelliJ UI Guidelines and prefer conforming to standard.

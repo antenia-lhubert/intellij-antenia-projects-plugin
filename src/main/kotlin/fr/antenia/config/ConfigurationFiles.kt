@@ -44,7 +44,7 @@ object ConfigurationFiles {
             logger.debug("Wrote Neo configuration directly to $path")
             return
         }
-        val fileDocument = ReadAction.compute<Document?, RuntimeException> {
+        val fileDocument = ReadAction.computeBlocking<Document?, RuntimeException> {
             FileDocumentManager.getInstance().getDocument(virtualFile)
         }
         if (fileDocument == null) {

@@ -49,10 +49,7 @@ class CommitMessageStatusAction : DumbAwareAction() {
 
         val validation = CommitMessageValidator.validate(document.text)
         event.presentation.isEnabledAndVisible = true
-        event.presentation.text = message(
-            if (validation.isValid) "commit.status.valid" else "commit.status.invalid",
-            validation.characterCount,
-        )
+        event.presentation.text = message("commit.status.count", validation.characterCount)
         event.presentation.description = validation.description
         event.presentation.icon = if (validation.isValid) AllIcons.General.InspectionsOK else AllIcons.General.InspectionsError
     }
@@ -62,7 +59,11 @@ class CommitMessageStatusAction : DumbAwareAction() {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 }
 
-private class ApplyCommitTemplateAction(private val template: CommitTemplate) : DumbAwareAction(template.name) {
+private class ApplyCommitTemplateAction(private val template: CommitTemplate) : DumbAwareAction(
+    template.name,
+    message("commit.template.apply.description", template.name),
+    null,
+) {
     override fun actionPerformed(event: AnActionEvent) {
         event.getData(VcsDataKeys.COMMIT_MESSAGE_CONTROL)?.setCommitMessage(template.content)
     }
@@ -74,7 +75,7 @@ private class ApplyCommitTemplateAction(private val template: CommitTemplate) : 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 }
 
-private class EditCommitTemplatesAction : DumbAwareAction(message("commit.template.edit")) {
+private class EditCommitTemplatesAction : DumbAwareAction(message("commit.template.edit"), message("commit.template.edit.description"), AllIcons.General.Settings) {
     override fun actionPerformed(event: AnActionEvent) {
         ShowSettingsUtil.getInstance().showSettingsDialog(event.project, CommitTemplatesConfigurable::class.java)
     }

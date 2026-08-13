@@ -105,3 +105,7 @@ Current automated coverage includes project detection, ordered-properties round 
 5. Run the relevant tests with the Gradle wrapper and `--no-daemon`.
 6. Confirm non-Neo projects and unrelated run/database configurations remain untouched.
 7. Confirm no credentials, machine-local paths, generated files, or IDE state are included in the change.
+
+# Local environment
+
+When executing Gradle commands, ensure it uses Java 21 (use mise or detect existing jdk 21 to use)

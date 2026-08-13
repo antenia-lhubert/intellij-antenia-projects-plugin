@@ -11,10 +11,10 @@ data class OrderedProperties(
     val newline: String = System.lineSeparator(),
     val finalNewline: Boolean = true,
 ) {
-    fun value(key: String): String? = lines.filterIsInstance<PropertyLine.Entry>().firstOrNull { it.key == key }?.value
+    fun value(key: String): String? = lines.filterIsInstance<PropertyLine.Entry>().lastOrNull { it.key == key }?.value
 
     fun setValue(key: String, value: String) {
-        val entry = lines.filterIsInstance<PropertyLine.Entry>().firstOrNull { it.key == key }
+        val entry = lines.filterIsInstance<PropertyLine.Entry>().lastOrNull { it.key == key }
         if (entry != null) entry.value = value else lines.add(PropertyLine.Entry(key, value))
     }
 
@@ -23,7 +23,7 @@ data class OrderedProperties(
         if (indexed.size < 2) return
         val first = indexed.first().index
         val entries = indexed.map { it.value }
-        lines.removeAll(entries.toSet())
+        indexed.asReversed().forEach { lines.removeAt(it.index) }
         lines.addAll(first.coerceAtMost(lines.size), entries)
     }
 }
@@ -75,6 +75,17 @@ object OrderedPropertiesCodec {
         return rendered + if (document.finalNewline) document.newline else ""
     }
 
+    fun comment(entry: PropertyLine.Entry): PropertyLine.Comment =
+        PropertyLine.Comment("# ${escape(entry.key, true)}=${escape(entry.value, false)}")
+
+    fun uncomment(comment: PropertyLine.Comment): PropertyLine.Entry? {
+        val raw = comment.raw.trimStart().drop(1).trimStart()
+        if (!hasExplicitSeparator(raw)) return null
+        val (rawKey, rawValue) = splitEntry(raw)
+        if (rawKey.isEmpty()) return null
+        return PropertyLine.Entry(unescape(rawKey), unescape(rawValue))
+    }
+
     private fun hasContinuation(line: String): Boolean {
         var slashes = 0
         for (index in line.indices.reversed()) {
@@ -82,6 +93,21 @@ object OrderedPropertiesCodec {
             slashes++
         }
         return slashes % 2 == 1
+    }
+
+    private fun hasExplicitSeparator(line: String): Boolean {
+        var escaped = false
+        for (index in line.indices) {
+            val character = line[index]
+            if (!escaped && (character == '=' || character == ':')) return index > 0
+            if (!escaped && character.isWhitespace()) {
+                val separator = line.drop(index).trimStart().firstOrNull()
+                return index > 0 && (separator == '=' || separator == ':')
+            }
+            escaped = !escaped && character == '\\'
+            if (character != '\\') escaped = false
+        }
+        return false
     }
 
     private fun splitEntry(line: String): Pair<String, String> {
