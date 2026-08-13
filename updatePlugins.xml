@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugins>
     <plugin id="fr.antenia.antenia-projects"
-            url="https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/releases/download/v1.0.4-SNAPSHOT/antenia-projects-1.0.4-SNAPSHOT.zip"
-            version="1.0.4-SNAPSHOT">
+            url="https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/releases/download/v1.0.5-SNAPSHOT/antenia-projects-1.0.5-SNAPSHOT.zip"
+            version="1.0.5-SNAPSHOT">
         <idea-version since-build="262.9437"/>
         <name>Antenia Projects</name>
         <description><![CDATA[
