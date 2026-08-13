@@ -110,4 +110,4 @@ Current automated coverage includes project detection, ordered-properties round 
 
 # Local environment
 
-When executing Gradle commands, ensure it uses Java 21 (use mise or detect existing jdk 21 to use)
+When executing Gradle commands, ensure it uses Java 21 (use mise (temurin) or detect existing jdk 21 (temurin) to use)
