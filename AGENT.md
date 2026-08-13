@@ -84,6 +84,8 @@ gradlew.bat --no-daemon buildPlugin
 
 Use the smallest relevant verification while iterating, then run `check` before finishing. Run `verifyPlugin` when changing plugin metadata, extension registration, IntelliJ API usage, or platform dependencies. Use `runIde` for UI, lifecycle, Password Safe, database, artifact, and run-configuration changes that unit tests cannot exercise adequately.
 
+Maintain user-visible changes under `Unreleased` in `CHANGELOG.md`. During release preparation, set the exact version in `gradle.properties`, run `patchChangelog`, preserve the repository's bracketed release heading and comparison-link format, and update `updatePlugins.xml`. The Gradle plugins automatically populate the generated `plugin.xml` version and change notes when `patchPluginXml` or `buildPlugin` runs; never add generated `<version>` or `<change-notes>` elements to the source descriptor. See the README changelog and manual-release sections for the complete procedure.
+
 ## Testing Guidelines
 
 - Use JUnit 4, matching the existing tests and `libs.junit` dependency.

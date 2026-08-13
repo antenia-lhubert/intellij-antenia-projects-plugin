@@ -133,15 +133,31 @@ On Windows, use `gradlew.bat` instead of `./gradlew`. Always pass `--no-daemon`;
 
 Shared IntelliJ run configurations are available for the sandbox IDE, tests, and plugin verification.
 
+### Changelog
+
+Add user-visible changes to the appropriate `Added`, `Changed`, or `Fixed` group under `Unreleased` in `CHANGELOG.md`. Keep entries concise and written as imperative statements. Do not edit a published version's notes.
+
+When preparing a version:
+
+1. Set `version` in `gradle.properties` to the exact version being published, including the `-SNAPSHOT` suffix used by this repository.
+2. Run `./gradlew --no-daemon patchChangelog` or `gradlew.bat --no-daemon patchChangelog` on Windows. This promotes `Unreleased` to a dated section for the Gradle project version and leaves a new empty `Unreleased` section.
+3. Keep the generated release heading in the repository's `## [<version>] - YYYY-MM-DD` format.
+4. Update the comparison links at the end of `CHANGELOG.md`: point `Unreleased` from the new tag to `HEAD`, and add the new version comparison from the preceding tag.
+
+The IntelliJ Platform Gradle Plugin integrates automatically with the Gradle Changelog Plugin. `patchPluginXml`, which runs as part of `buildPlugin`, writes the current version and its changelog entry into the generated `plugin.xml` as `<version>` and `<change-notes>`. If `CHANGELOG.md` has no section matching the project version, it uses `Unreleased`. Do not add these generated elements manually to `src/main/resources/META-INF/plugin.xml`.
+
+To inspect the patched metadata without building the ZIP, run `./gradlew --no-daemon patchPluginXml` or `gradlew.bat --no-daemon patchPluginXml` and review `build/tmp/patchPluginXml/plugin.xml`. Content under `build/` is generated and must not be committed.
+
 ### Manual Releases
 
 Releases are built and published manually; this repository has no automated release build.
 
-1. Set `version` in `gradle.properties` to the release version without a `-SNAPSHOT` suffix.
+1. Set and patch the version and changelog as described above.
 2. Update `updatePlugins.xml` so its `version`, release tag, artifact filename, and `idea-version` match the generated plugin metadata.
 3. Run `./gradlew --no-daemon clean buildPlugin` or `gradlew.bat --no-daemon clean buildPlugin` on Windows.
-4. Commit and push the release metadata to `main`.
-5. Create the GitHub release tagged `v<version>` from that commit and upload `build/distributions/antenia-projects-<version>.zip` without renaming it.
+4. Verify `build/tmp/patchPluginXml/plugin.xml` contains the expected version, change notes, dependencies, and IDE compatibility.
+5. Commit and push the release metadata to `main`.
+6. Create the GitHub release tagged `v<version>` from that commit and upload `build/distributions/antenia-projects-<version>.zip` without renaming it.
 
 ## Specification
 
