@@ -93,7 +93,9 @@ class ConfigurationPanel(
     private lateinit var document: OrderedProperties
     private lateinit var file: Path
     private var changingFile = false
-    private var model = ConfigurationTableModel(schema, ::persist)
+    private var model = ConfigurationTableModel(schema) {
+        ApplicationManager.getApplication().invokeLater(::persist, ModalityState.defaultModalityState())
+    }
     private val table = object : JBTable(model) {
         private var mousePressedOnSelectedRow = false
 
