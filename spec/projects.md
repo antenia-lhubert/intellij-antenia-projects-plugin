@@ -15,12 +15,23 @@ If a project is none, no Neo feature (except global configuration) should be ena
 
 Each of those projects have versions:
 
-- 0-1.4: Java 8, Tomcat 9
-- 1.5: Java 17, tomcat 10.1
-- 1.6+: Java 25, tomcat 10.1
+- 1.1-1.4: Tomcat 9
+- 1.5: Tomcat 10.1
+- 1.6+: Tomcat 11
 
-Those versions are not specified as version number in the pom.xml.
-Instead, they can be deduced from the java version in the pom (in priority order: `java.version`, `jdk.version`, `version.compiler`, `maven.compiler.release`, `maven.compiler.target`, `maven.compiler.source`).
+Those versions are specified as version number in the pom.xml.
+
+If version is `1.0-SNAPSHOT`, count the project version as undetected.
+If version is undetected, infer it with the following:
+
+- 1.1-1.4: Java 8
+- 1.5: Java 17
+- 1.6+: Java 25
+
+Version inference acts as a gap fill, and will be deleted later, so it should be contained and easy to remove.
+
+Java version should be detected independently of the project version.
+They can be deduced from the java version in the pom (in priority order: `java.version`, `jdk.version`, `version.compiler`, `maven.compiler.release`, `maven.compiler.target`, `maven.compiler.source`).
 
 # Project configurations
 

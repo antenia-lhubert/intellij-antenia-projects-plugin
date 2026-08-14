@@ -19,6 +19,7 @@ class NeoProjectDetectorTest {
             """
             <project>
               <artifactId>webapp-novanet</artifactId>
+              <version>1.6.2</version>
               <properties>
                 <java.version>17</java.version>
                 <maven.compiler.release>25</maven.compiler.release>
@@ -32,6 +33,8 @@ class NeoProjectDetectorTest {
         val project = NeoProjectDetector.detect(root)!!
 
         assertEquals(NeoProjectType.CORE, project.type)
+        assertEquals("1.6.2", project.version)
+        assertEquals("11", project.tomcatVersion)
         assertEquals(17, project.javaVersion)
         assertTrue(project.hasReact)
     }
@@ -46,6 +49,8 @@ class NeoProjectDetectorTest {
         val project = NeoProjectDetector.detect(root)!!
 
         assertEquals(NeoProjectType.GED, project.type)
+        assertEquals("1.1-1.4", project.version)
+        assertEquals("9", project.tomcatVersion)
         assertEquals(8, project.javaVersion)
         assertFalse(project.hasReact)
     }
@@ -58,6 +63,34 @@ class NeoProjectDetectorTest {
         )
 
         assertEquals(25, NeoProjectDetector.detect(root)!!.javaVersion)
+    }
+
+    @Test
+    fun `infers project version from java for legacy placeholder version`() {
+        val root = temporaryFolder.newFolder("placeholder-version").toPath()
+        root.resolve("pom.xml").toFile().writeText(
+            "<project><artifactId>webapp-owlnet</artifactId><version>1.0-SNAPSHOT</version><properties><java.version>25</java.version></properties></project>",
+        )
+
+        val project = NeoProjectDetector.detect(root)!!
+
+        assertEquals("1.6+", project.version)
+        assertEquals("11", project.tomcatVersion)
+        assertEquals(25, project.javaVersion)
+    }
+
+    @Test
+    fun `resolves project version property independently from java version`() {
+        val root = temporaryFolder.newFolder("version-property").toPath()
+        root.resolve("pom.xml").toFile().writeText(
+            "<project><artifactId>webapp-ged</artifactId><version>\${revision}</version><properties><revision>1.5-SNAPSHOT</revision><java.version>8</java.version></properties></project>",
+        )
+
+        val project = NeoProjectDetector.detect(root)!!
+
+        assertEquals("1.5-SNAPSHOT", project.version)
+        assertEquals("10.1", project.tomcatVersion)
+        assertEquals(8, project.javaVersion)
     }
 
     @Test

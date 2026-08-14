@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Changed
+
+- Detect Neo project versions from Maven, use them to select Tomcat 9, 10.1, or 11, and show the version in the configuration header.
+
 ## [1.0.6-SNAPSHOT] - 2026-08-13
 
 ### Added

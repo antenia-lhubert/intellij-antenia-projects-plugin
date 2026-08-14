@@ -54,7 +54,8 @@ class NeoProjectActivity : ProjectActivity {
             }
             logger.info(
                 "Detected ${neoProject.type.displayName} project '${project.name}': " +
-                    "artifactId=${neoProject.type.artifactId}, java=${neoProject.javaVersion}, react=${neoProject.hasReact}",
+                    "artifactId=${neoProject.type.artifactId}, version=${neoProject.version}, " +
+                    "java=${neoProject.javaVersion}, react=${neoProject.hasReact}",
             )
             var succeeded = false
             try {

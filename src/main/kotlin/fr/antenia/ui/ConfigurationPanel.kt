@@ -284,7 +284,7 @@ class ConfigurationPanel(
         }.component
         return JPanel(BorderLayout(JBUI.scale(12), 0)).apply {
             border = JBUI.Borders.emptyBottom(8)
-            add(JBLabel(neoProject.type.displayName).apply {
+            add(JBLabel(message("configuration.project.header", neoProject.type.displayName, neoProject.version)).apply {
                 font = font.deriveFont(font.style or java.awt.Font.BOLD)
             }, BorderLayout.WEST)
             add(search, BorderLayout.CENTER)
