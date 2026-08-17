@@ -161,4 +161,4 @@ Releases are built and published manually; this repository has no automated rele
 
 ## Specification
 
-The requirements in [`spec/`](spec/) are the source of truth for project behavior. See [`AGENT.md`](AGENT.md) for repository architecture and contribution guidance.
+The requirements in [`spec/`](spec/) are the source of truth for project behavior. See [`AGENTS.md`](AGENTS.md) for repository architecture and contribution guidance.

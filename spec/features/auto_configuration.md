@@ -532,3 +532,11 @@ Run configurations should wait for the artifact to exist before referencing it.
 It should never touch other run configurations other than those listed here.
 
 Once created, it should not change the run configuration settings, except for the artifact that should always properly reference the artifact.
+
+# Registry
+
+The following registry keys should be set:
+
+| Key                                       | Value    | Condition |
+|-------------------------------------------|----------|-----------|
+| `vcs.merge.conflict.iterative.resolution` | disabled |           |

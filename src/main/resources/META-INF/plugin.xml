@@ -76,6 +76,8 @@
                   topic="com.intellij.ide.AppLifecycleListener"/>
         <listener class="fr.antenia.automation.TomcatApplicationListener"
                   topic="com.intellij.ide.AppLifecycleListener"/>
+        <listener class="fr.antenia.automation.RegistryApplicationListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
     </applicationListeners>
 
 </idea-plugin>

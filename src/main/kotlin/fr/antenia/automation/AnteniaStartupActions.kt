@@ -13,8 +13,9 @@ object AnteniaStartupActions {
                 .onFailure { logger.error("Unable to reapply JDK startup actions", it) }
             val tomcatResult = runCatching(TomcatApplicationListener::reapply)
                 .onFailure { logger.error("Unable to reapply Tomcat startup actions", it) }
+            val registrySucceeded = RegistryAutoConfigurator.configure()
             NeoProjectActivity().scheduleConfiguration(project, "startup actions manually reapplied") { projectSucceeded ->
-                completed?.invoke(jdkResult.isSuccess && tomcatResult.isSuccess && projectSucceeded)
+                completed?.invoke(jdkResult.isSuccess && tomcatResult.isSuccess && registrySucceeded && projectSucceeded)
             }
         }
     }

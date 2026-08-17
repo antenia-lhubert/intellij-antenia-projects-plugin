@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Added
+
+- Disable iterative merge conflict resolution in the IntelliJ registry during automatic setup.
+
 ### Changed
 
 - Detect Neo project versions from Maven, use them to select Tomcat 9, 10.1, or 11, and show the version in the configuration header.
