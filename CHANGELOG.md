@@ -10,6 +10,7 @@ Version names retain the snapshot identifiers used by the repository.
 ### Changed
 
 - Detect Neo project versions from Maven, use them to select Tomcat 9, 10.1, or 11, and show the version in the configuration header.
+- Refresh the plugin and tool-window icons with the Antenia brand mark.
 
 ### Fixed
 
