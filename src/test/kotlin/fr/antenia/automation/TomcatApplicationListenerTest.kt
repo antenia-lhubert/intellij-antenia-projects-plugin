@@ -51,6 +51,13 @@ class TomcatApplicationListenerTest {
     }
 
     @Test
+    fun `rejects tomcat archive`() {
+        val archive = temporaryFolder.newFile("apache-tomcat-10.1.57.zip").toPath()
+
+        assertTrue(TomcatApplicationListener.resolveTomcatHomes(archive).isEmpty())
+    }
+
+    @Test
     fun `adds mise suffix without changing version number`() {
         val home = Path.of("C:\\Users\\developer\\AppData\\Local\\mise\\installs\\tomcat\\10.1.57\\apache-tomcat-10.1.57")
 

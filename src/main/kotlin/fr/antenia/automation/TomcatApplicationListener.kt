@@ -37,7 +37,7 @@ class TomcatApplicationListener : AppLifecycleListener {
             .mapNotNull { (it.persistentData as? TomcatPersistentData)?.HOME }
             .toMutableList()
 
-        homes.forEach { home ->
+        homes.filter(::isTomcatHome).forEach { home ->
             val homeString = home.toString()
             if (configuredHomes.any { FileUtil.pathsEqual(it, homeString) }) {
                 logger.info("Tomcat installation is already configured: $home")
@@ -93,7 +93,9 @@ class TomcatApplicationListener : AppLifecycleListener {
         if (!Files.isDirectory(toolsDirectory)) return
         try {
             Files.list(toolsDirectory).use { entries ->
-                entries.filter { it.name.startsWith("apache-tomcat-", ignoreCase = true) }.forEach { candidate ->
+                entries.filter {
+                    Files.isDirectory(it) && it.name.startsWith("apache-tomcat-", ignoreCase = true)
+                }.forEach { candidate ->
                     addCandidate(candidate, "tools", homes)
                 }
             }
@@ -204,7 +206,8 @@ class TomcatApplicationListener : AppLifecycleListener {
         }
 
         private fun isTomcatHome(path: Path): Boolean =
-            Files.isRegularFile(path.resolve("lib").resolve("catalina.jar")) &&
+            Files.isDirectory(path) &&
+                Files.isRegularFile(path.resolve("lib").resolve("catalina.jar")) &&
                 Files.isRegularFile(path.resolve("conf").resolve("server.xml")) &&
                 (Files.isRegularFile(path.resolve("bin").resolve("catalina.bat")) ||
                     Files.isRegularFile(path.resolve("bin").resolve("catalina.sh")))
