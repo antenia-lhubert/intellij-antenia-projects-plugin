@@ -7,6 +7,8 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+## [1.0.7-SNAPSHOT] - 2026-08-18
+
 ### Added
 
 - Add reusable user-defined database connection profiles with Password Safe credential overrides, bounded icon actions, shared profile editors, save/reset actions, a dedicated database-host manager, immutable provided host suggestions, and full profile and custom-host management.
@@ -124,7 +126,8 @@ Version names retain the snapshot identifiers used by the repository.
 - Create the initial IntelliJ Platform plugin scaffold.
 - Add the generated demonstration tool window and build, test, and verification configurations.
 
-[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.6-SNAPSHOT...HEAD
+[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.7-SNAPSHOT...HEAD
+[1.0.7-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.6-SNAPSHOT...v1.0.7-SNAPSHOT
 [1.0.6-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.5-SNAPSHOT...v1.0.6-SNAPSHOT
 [1.0.5-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.4-SNAPSHOT...v1.0.5-SNAPSHOT
 [1.0.4-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.3-SNAPSHOT...v1.0.4-SNAPSHOT
