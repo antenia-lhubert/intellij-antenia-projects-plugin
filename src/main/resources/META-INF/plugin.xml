@@ -43,9 +43,19 @@
         <applicationConfigurable parentId="tools" instance="fr.antenia.settings.AnteniaConfigurable"
                                   id="fr.antenia" bundle="messages.MyMessageBundle"
                                   key="configurable.antenia.display.name">
-            <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
-                          id="fr.antenia.globalDatabase" bundle="messages.MyMessageBundle"
-                          key="configurable.credentials.display.name"/>
+            <configurable instance="fr.antenia.database.DatabaseConfigurable"
+                          id="fr.antenia.database" bundle="messages.MyMessageBundle"
+                          key="configurable.database.display.name">
+                <configurable instance="fr.antenia.credentials.GlobalDatabaseConfigurable"
+                              id="fr.antenia.globalDatabase" bundle="messages.MyMessageBundle"
+                              key="configurable.credentials.display.name"/>
+                <configurable instance="fr.antenia.database.DatabaseConnectionProfilesConfigurable"
+                              id="fr.antenia.databaseProfiles" bundle="messages.MyMessageBundle"
+                              key="configurable.database.profiles.display.name"/>
+                <configurable instance="fr.antenia.database.DatabaseHostsConfigurable"
+                              id="fr.antenia.databaseHosts" bundle="messages.MyMessageBundle"
+                              key="configurable.database.hosts.display.name"/>
+            </configurable>
             <configurable instance="fr.antenia.commit.CommitTemplatesConfigurable"
                           id="fr.antenia.commitTemplates" bundle="messages.MyMessageBundle"
                           key="configurable.commit.templates.display.name"/>

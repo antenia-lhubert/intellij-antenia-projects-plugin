@@ -9,10 +9,13 @@ Version names retain the snapshot identifiers used by the repository.
 
 ### Added
 
+- Add reusable user-defined database connection profiles with Password Safe credential overrides, bounded icon actions, shared profile editors, save/reset actions, a dedicated database-host manager, immutable provided host suggestions, and full profile and custom-host management.
 - Disable iterative merge conflict resolution in the IntelliJ registry during automatic setup.
+- Add the Antenia Subversion repositories to IntelliJ automatically when they are missing.
 
 ### Changed
 
+- Group database credentials, profiles, and hosts under a Database settings subcategory.
 - Detect Neo project versions from Maven, use them to select Tomcat 9, 10.1, or 11, and show the version in the configuration header.
 - Refresh the plugin and tool-window icons with the Antenia brand mark.
 

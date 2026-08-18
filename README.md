@@ -39,6 +39,7 @@ The plugin checks `java.version`, `jdk.version`, `version.compiler`, `maven.comp
 - Preserves property order, comments, blank lines, and manually added keys.
 - Provides dedicated database and environment editors plus known-key completion.
 - Stores reusable global database credentials in IntelliJ Password Safe.
+- Provides reusable user-defined database profiles and Antenia host suggestions.
 - Creates or updates an IntelliJ MySQL data source for the configured host and database.
 - Selects a matching project SDK and configures a 4096 MB compiler heap.
 - Creates the exploded WAR artifact and a local `webapp` Tomcat run configuration.
@@ -70,9 +71,17 @@ Only the directory for the detected project type is created. Use **Reset** in th
 
 ### Global Database Credentials
 
-Configure a shared database username and password under **Settings > Tools > Antenia > Credentials**. Secrets are stored through IntelliJ Password Safe and are synchronized to supported projects unless **Override global credentials** is enabled in the project's database form. Disabling an override keeps its project credentials in Password Safe so they are restored if the override is enabled again.
+Configure a shared database username and password under **Settings > Tools > Antenia > Database > Credentials**. Secrets are stored through IntelliJ Password Safe and are synchronized to supported projects unless **Override global credentials** is enabled in the project's database form. Disabling an override keeps its project credentials in Password Safe so they are restored if the override is enabled again.
 
 The database host, port, and database name are always project-specific. The port defaults to `3306`.
+
+### Database Profiles
+
+Manage reusable connection presets under **Settings > Tools > Antenia > Database > Database Profiles**, or use **Manage...** next to the profile selector in a project's database form. Profiles are user-defined and can be created, edited, deleted, and cloned.
+
+Profiles contain a name, host, port, optional database, and the credential override section. Profile passwords are stored in IntelliJ Password Safe, never plugin state XML. A matching user profile becomes active automatically without overwriting the project's current credentials; otherwise the selector remains empty. Explicitly selecting or resetting a profile applies its saved values, and an empty profile database preserves the project's existing database. Quick actions update the selected profile, save the connection as another profile, or reset unsaved edits.
+
+The host field remains an editable selector with the three provided Antenia hosts. A host entered manually can be saved directly from the project form and then becomes available as a suggestion across projects. Use **Settings > Tools > Antenia > Database > Database Hosts**, or **Manage...** beside the host selector, to create, edit, or delete custom hosts; provided hosts remain read-only.
 
 ### Commit Templates
 
@@ -85,6 +94,8 @@ Create blank custom templates or clone an existing template under **Settings > T
 At application startup, the plugin discovers JDK installations under `%PROGRAMFILES%\Java`, the system and user-local Eclipse Adoptium directories, and through `mise`, then adds missing installations to IntelliJ before assigning a project SDK. Mise-managed JDKs use names such as `temurin-25 (mise)`.
 
 The plugin also discovers Tomcat installations directly below `C:\tools` and through `mise`, then adds missing installations to IntelliJ's global application servers. Mise-managed servers use names such as `Tomcat 10.1.57 (mise)`. The plugin creates a `webapp` local Tomcat configuration after the Maven project and exploded WAR artifact are available, chooses the highest compatible Tomcat version, deploys the project artifact at the expected context, and opens the HTTPS application URL after launch.
+
+The Antenia Subversion repository locations for Neo Core, GED, Selfcare, and Foxnet are also added to IntelliJ's repository browser at application startup when missing.
 
 For Neo Core projects with a `novanet-react` package, the plugin also creates:
 

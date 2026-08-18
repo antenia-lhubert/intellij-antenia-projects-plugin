@@ -27,6 +27,7 @@ class NeoProjectActivity : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         CodingStyleConfigurator.configure(project)
+        SubversionRepositoryAutoConfigurator.configure()
         withContext(Dispatchers.IO) {
             JdkAutoConfigurator.configure()
             TomcatApplicationListener.configure()

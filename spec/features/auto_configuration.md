@@ -540,3 +540,12 @@ The following registry keys should be set:
 | Key                                       | Value    | Condition |
 |-------------------------------------------|----------|-----------|
 | `vcs.merge.conflict.iterative.resolution` | disabled |           |
+
+# Repositories
+
+The following subversion repositories should be added if missing:
+
+- `svn://leader-svn.leaderinfo.com/novanet`
+- `svn://leader-svn.leaderinfo.com/projetged`
+- `svn://leader-svn.leaderinfo.com/owlnet`
+- `svn://leader-svn.leaderinfo.com/foxnet`

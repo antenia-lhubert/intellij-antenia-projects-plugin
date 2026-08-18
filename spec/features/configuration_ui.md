@@ -19,9 +19,27 @@ Configuration UI should sync with the config file (both ways) be live applied.
 Configuration UI should be a tool window.
 
 User should be able to configure global database credentials that are safely stored and usable across projects.
-(global configuration should be done in a separate UI in `Settings > Tools`)
+(global configuration should be done in a separate UI in `Settings > Tools > Antenia > Database > Credentials`)
 Global database credentials should contain only a username and password; connection details remain project-specific.
 Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
+
+Users should be able to manage reusable database connection profiles in `Settings > Tools > Antenia > Database > Database Profiles`.
+A profile contains a unique name, host, port, optional database, and the global-credential override section.
+The override decision is stored with the profile. Profile override credentials are stored in IntelliJ Password Safe and never in plugin state XML.
+Profile names are unique case-insensitively. Custom profiles are stored globally and can be created, edited, deleted, and cloned.
+No profiles are provided by the plugin. The selector automatically displays a user profile when its connection details match the project, and remains empty when none matches.
+After selecting or matching a profile, connection fields can be edited while that profile remains selected. Quick actions allow saving the edited values back to the profile or saving them as a new profile.
+
+The following immutable hosts are always provided as suggestions:
+- `antenia-dev-mysql5.leaderinfo.com`
+- `antenia-dev-mysql8.leaderinfo.com`
+- `mysql8-4-5-dev.antenia.com`
+
+Users can enter any host and save a host that is not yet in the suggestion list for reuse across projects.
+Hosts can be managed in `Settings > Tools > Antenia > Database > Database Hosts`. Provided hosts are read-only and cannot be deleted; custom hosts can be created, edited, and deleted.
+The database-profile settings page and project database form should reuse the same connection, host, and credential controls so validation and host actions behave consistently.
+Profile and host quick actions are icon buttons with accessible names and tooltips. Their action strip remains fixed on the right while selectors consume only the available width; long values must not expand the form or introduce horizontal scrolling.
+The profile settings host control has the same save-host and manage-host actions as the project form.
 
 Users should be able to configure global Tomcat run configuration values in `Settings > Tools > Antenia > Run Configurations`:
 - `OPEN_IN_BROWSER`, defaulting to `true`
@@ -35,11 +53,18 @@ These settings should be stored globally and applied when the plugin creates a p
 Existing run configurations should not be modified.
 
 DB Credentials form should have:
-- host (should be a select to chose amongst known servers + a free input so that user can put in an unknown host)
+- a database profile selector with access to the profile management page
+- host (free input so that user can put in an unknown host)
 - port (defaults to 3306)
 - database
 - have the option to override global credentials
 - disabling the override should retain the project credentials securely so they are restored when the override is enabled again
+
+Selecting a profile copies its connection details into the project form. A profile without a database keeps the current project database.
+The form infers a user profile from matching connection details. Directly editing a selected profile keeps it selected so the edited values can be saved.
+Selecting or resetting a profile applies its credential override decision and securely stored override credentials. Automatically matching a profile marks it active without overwriting the project's current credential section; differences can then be saved to or reset from the profile.
+An edited active profile has a reset action that restores all connection and credential fields from the saved profile.
+Applying or editing a profile must not silently change projects that previously used its values; the user explicitly selects it to apply it again.
 
 Env form should have:
 - an env select (should be a select to chose amongst known envs + a free input so that user can put in an unknown env)

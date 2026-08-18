@@ -85,3 +85,32 @@ object ProjectDatabaseCredentials {
         "fr.antenia.antenia-projects.project-database.${project.locationHash}",
     )
 }
+
+object ProfileDatabaseCredentials {
+    private val logger = Logger.getInstance(ProfileDatabaseCredentials::class.java)
+
+    fun credentials(profileId: String): DatabaseCredentials? {
+        if (profileId.isBlank()) return null
+        val stored = PasswordSafe.instance.get(attributes(profileId)) ?: return null
+        return DatabaseCredentials(stored.userName.orEmpty(), stored.getPasswordAsString().orEmpty())
+    }
+
+    fun save(profileId: String, credentials: DatabaseCredentials) {
+        require(profileId.isNotBlank()) { "A database profile ID is required" }
+        try {
+            PasswordSafe.instance.set(attributes(profileId), Credentials(credentials.username, credentials.password))
+        } catch (exception: Exception) {
+            logger.error("Unable to save database profile credentials", exception)
+            throw exception
+        }
+    }
+
+    fun clear(profileId: String) {
+        if (profileId.isBlank()) return
+        PasswordSafe.instance.set(attributes(profileId), null)
+    }
+
+    private fun attributes(profileId: String): CredentialAttributes = CredentialAttributes(
+        "fr.antenia.antenia-projects.profile-database.$profileId",
+    )
+}

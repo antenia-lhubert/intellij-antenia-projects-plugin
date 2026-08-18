@@ -1,9 +1,11 @@
 # Database profile
 
-When a database (host & db) is configured, IntelliJ should have a corresponding database profile with a mysql driver.
+Reusable database connection profiles are defined in [configuration_ui.md](configuration_ui.md). They are connection presets and are distinct from IntelliJ data sources.
 
-The db profile should have the name of the host, and the database as its connection.
+When a database (host & db) is configured, IntelliJ should have a corresponding data-source profile with a mysql driver.
 
-When the configuration change, it should not delete the db profile.
+The data-source profile should have the name of the host, and the database as its connection.
 
-If a db profile already exist for the host, complete the profile by adding the db in it.
+When the configuration changes, it should not delete the data-source profile.
+
+If a data-source profile already exists for the host, complete the profile by adding the db in it.
