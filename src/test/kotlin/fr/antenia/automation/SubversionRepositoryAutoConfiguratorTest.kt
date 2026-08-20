@@ -17,10 +17,10 @@ class SubversionRepositoryAutoConfiguratorTest {
         )
 
         val expected = listOf(
-            "svn://leader-svn.leaderinfo.com/novanet",
-            "svn://leader-svn.leaderinfo.com/projetged",
-            "svn://leader-svn.leaderinfo.com/owlnet",
-            "svn://leader-svn.leaderinfo.com/foxnet",
+            "svn://svn.leaderinfo.com/novanet",
+            "svn://svn.leaderinfo.com/projetged",
+            "svn://svn.leaderinfo.com/owlnet",
+            "svn://svn.leaderinfo.com/foxnet",
         )
         assertEquals(expected, repositories)
         assertEquals(expected, typedUrls)
@@ -32,25 +32,25 @@ class SubversionRepositoryAutoConfiguratorTest {
         val typedUrls = mutableListOf<String>()
 
         SubversionRepositoryAutoConfigurator.addMissingRepositories(
-            listOf("svn://custom/repository", "svn://leader-svn.leaderinfo.com/novanet/"),
-            listOf("svn://leader-svn.leaderinfo.com/projetged"),
+            listOf("svn://custom/repository", "svn://svn.leaderinfo.com/novanet/"),
+            listOf("svn://svn.leaderinfo.com/projetged"),
             repositories::add,
             typedUrls::add,
         )
 
         assertEquals(
             listOf(
-                "svn://leader-svn.leaderinfo.com/projetged",
-                "svn://leader-svn.leaderinfo.com/owlnet",
-                "svn://leader-svn.leaderinfo.com/foxnet",
+                "svn://svn.leaderinfo.com/projetged",
+                "svn://svn.leaderinfo.com/owlnet",
+                "svn://svn.leaderinfo.com/foxnet",
             ),
             repositories,
         )
         assertEquals(
             listOf(
-                "svn://leader-svn.leaderinfo.com/novanet",
-                "svn://leader-svn.leaderinfo.com/owlnet",
-                "svn://leader-svn.leaderinfo.com/foxnet",
+                "svn://svn.leaderinfo.com/novanet",
+                "svn://svn.leaderinfo.com/owlnet",
+                "svn://svn.leaderinfo.com/foxnet",
             ),
             typedUrls,
         )

@@ -545,7 +545,7 @@ The following registry keys should be set:
 
 The following subversion repositories should be added if missing:
 
-- `svn://leader-svn.leaderinfo.com/novanet`
-- `svn://leader-svn.leaderinfo.com/projetged`
-- `svn://leader-svn.leaderinfo.com/owlnet`
-- `svn://leader-svn.leaderinfo.com/foxnet`
+- `svn://svn.leaderinfo.com/novanet`
+- `svn://svn.leaderinfo.com/projetged`
+- `svn://svn.leaderinfo.com/owlnet`
+- `svn://svn.leaderinfo.com/foxnet`

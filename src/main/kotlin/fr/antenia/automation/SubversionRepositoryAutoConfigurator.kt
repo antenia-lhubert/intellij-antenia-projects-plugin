@@ -8,10 +8,10 @@ import org.jetbrains.idea.svn.SvnApplicationSettings
 internal object SubversionRepositoryAutoConfigurator {
     private val logger = Logger.getInstance(SubversionRepositoryAutoConfigurator::class.java)
     private val repositories = listOf(
-        "svn://leader-svn.leaderinfo.com/novanet",
-        "svn://leader-svn.leaderinfo.com/projetged",
-        "svn://leader-svn.leaderinfo.com/owlnet",
-        "svn://leader-svn.leaderinfo.com/foxnet",
+        "svn://svn.leaderinfo.com/novanet",
+        "svn://svn.leaderinfo.com/projetged",
+        "svn://svn.leaderinfo.com/owlnet",
+        "svn://svn.leaderinfo.com/foxnet",
     )
 
     fun configure(): Boolean = try {
