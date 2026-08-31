@@ -50,6 +50,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
     private val hostSelector = profileFields.hostSelector
     private val portField = profileFields.portField
     private val databaseField = profileFields.databaseField
+    private val databaseEdiField = profileFields.databaseEdiField
     private val overrideField = profileFields.overrideField
     private val usernameField = profileFields.usernameField
     private val passwordField = profileFields.passwordField
@@ -162,6 +163,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         hostSelector.comboBox.accessibleContext.accessibleName = message("database.profiles.host")
         portField.accessibleContext.accessibleName = message("database.profiles.port")
         databaseField.accessibleContext.accessibleName = message("database.profiles.database")
+        databaseEdiField.accessibleContext.accessibleName = message("database.profiles.database.edi")
         overrideField.accessibleContext.accessibleName = message("database.profiles.override")
         usernameField.accessibleContext.accessibleName = message("database.profiles.username")
         passwordField.accessibleContext.accessibleName = message("database.profiles.password")
@@ -177,6 +179,9 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         })
         databaseField.document.addDocumentListener(fieldListener {
             model.rowAt(profileList.selectedIndex)?.database = databaseField.text
+        })
+        databaseEdiField.document.addDocumentListener(fieldListener {
+            model.rowAt(profileList.selectedIndex)?.databaseEdi = databaseEdiField.text
         })
         overrideField.addActionListener {
             if (!updatingFields) {
@@ -264,6 +269,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         hostSelector.setHost(selected?.host.orEmpty())
         portField.text = selected?.port.orEmpty()
         databaseField.text = selected?.database.orEmpty()
+        databaseEdiField.text = selected?.databaseEdi.orEmpty()
         overrideField.isSelected = selected?.overrideGlobalCredentials == true
         usernameField.text = selected?.username.orEmpty()
         passwordField.text = selected?.password.orEmpty()
@@ -364,6 +370,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         var host: String,
         var port: String,
         var database: String,
+        var databaseEdi: String,
         var overrideGlobalCredentials: Boolean,
         val id: String,
         var username: String,
@@ -376,6 +383,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             profile.host,
             profile.port.toString(),
             profile.database,
+            profile.databaseEdi,
             profile.overrideGlobalCredentials,
             profile.id,
             credentials.username,
@@ -391,6 +399,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             database = database,
             overrideGlobalCredentials = overrideGlobalCredentials,
             id = id,
+            databaseEdi = databaseEdi,
         )
 
         fun credentialsModified(): Boolean = username != savedUsername || password != savedPassword

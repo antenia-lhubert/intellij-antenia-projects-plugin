@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Added
+
+- Add optional advanced `databaseEdi` values to reusable database profiles and the Core project database form.
+
 ### Fixed
 
 - Keep Neo Configuration controls visible when the tool window's `Show Toolbar` option is disabled.

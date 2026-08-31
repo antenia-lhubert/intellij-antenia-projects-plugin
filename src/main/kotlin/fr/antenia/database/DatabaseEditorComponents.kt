@@ -16,6 +16,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import fr.antenia.MyMessageBundle.message
@@ -131,6 +132,7 @@ internal class DatabaseProfileFields(
     val hostSelector = DatabaseHostSelector(saveHostTooltip, manageHostsTooltip, manageHosts)
     val portField = JBTextField("3306")
     val databaseField = JBTextField()
+    val databaseEdiField = JBTextField()
     val overrideField = JBCheckBox(message("configuration.database.override")).apply {
         accessibleContext.accessibleName = message("configuration.database.override.accessible.name")
     }
@@ -147,16 +149,27 @@ internal class DatabaseProfileFields(
         primaryComponent: JComponent,
         title: String? = null,
         primaryActions: List<DatabaseEditorAction> = emptyList(),
+        showDatabaseEdi: Boolean = true,
     ): JComponent {
         val builder = FormBuilder.createFormBuilder()
         title?.let {
             builder.addComponent(JBLabel(it).apply { font = font.deriveFont(font.style or java.awt.Font.BOLD) })
         }
-        return builder
+        builder
             .addLabeledComponent(primaryLabel, boundedActionField(primaryComponent, *primaryActions.toTypedArray()))
             .addLabeledComponent(message("database.profiles.host"), hostSelector.component)
             .addLabeledComponent(message("database.profiles.port"), boundedActionField(portField))
             .addLabeledComponent(message("database.profiles.database"), boundedActionField(databaseField))
+        if (showDatabaseEdi) {
+            builder.addComponent(panel {
+                collapsibleGroup(message("database.profiles.advanced")) {
+                    row(message("database.profiles.database.edi")) {
+                        cell(boundedActionField(databaseEdiField))
+                    }
+                }
+            })
+        }
+        return builder
             .addComponent(boundedActionField(JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
                 isOpaque = false
                 add(overrideField)
@@ -204,6 +217,8 @@ internal class DatabaseProfileFields(
         portField.isEditable = enabled
         databaseField.isEnabled = enabled
         databaseField.isEditable = enabled
+        databaseEdiField.isEnabled = enabled
+        databaseEdiField.isEditable = enabled
         overrideField.isEnabled = enabled
         updateCredentialFields(enabled)
     }

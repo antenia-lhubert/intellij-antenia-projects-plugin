@@ -61,6 +61,7 @@ object GlobalDatabaseCredentialsSynchronizer {
         document.regroup(buildSet {
             add(keys.url)
             keys.database?.let(::add)
+            keys.databaseEdi?.let(::add)
             addAll(keys.usernames)
             addAll(keys.passwords)
         })

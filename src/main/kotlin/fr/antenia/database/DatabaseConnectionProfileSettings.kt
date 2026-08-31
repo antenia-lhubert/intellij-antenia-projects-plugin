@@ -63,6 +63,7 @@ class DatabaseConnectionProfileSettings :
         var host: String = ""
         var port: Int = 3306
         var database: String = ""
+        var databaseEdi: String = ""
         var overrideGlobalCredentials: Boolean = false
         var id: String = ""
 
@@ -71,6 +72,7 @@ class DatabaseConnectionProfileSettings :
             host = profile.host
             port = profile.port
             database = profile.database
+            databaseEdi = profile.databaseEdi
             overrideGlobalCredentials = profile.overrideGlobalCredentials
             id = profile.id
         }
@@ -82,6 +84,7 @@ class DatabaseConnectionProfileSettings :
             database = database,
             overrideGlobalCredentials = overrideGlobalCredentials,
             id = id,
+            databaseEdi = databaseEdi,
         )
     }
 

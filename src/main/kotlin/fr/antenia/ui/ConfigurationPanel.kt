@@ -597,6 +597,7 @@ class ConfigurationPanel(
     private fun databaseKeys(keys: DatabaseKeys): Set<String> = buildSet {
         add(keys.url)
         keys.database?.let(::add)
+        keys.databaseEdi?.let(::add)
         addAll(keys.usernames)
         addAll(keys.passwords)
     }
@@ -634,6 +635,7 @@ class ConfigurationPanel(
         private val hostSelector = profileFields.hostSelector
         private val port = profileFields.portField
         private val database = profileFields.databaseField
+        private val databaseEdi = profileFields.databaseEdiField
         private val saveProfileAction = DatabaseEditorAction(
             message("configuration.database.profile.save"),
             message("configuration.database.profile.save.tooltip"),
@@ -675,6 +677,8 @@ class ConfigurationPanel(
         private var profileDraftCredentials: DatabaseCredentials? = null
         private var profileDatabaseTextBaseline = ""
         private var profileStoredDatabaseBaseline: String? = null
+        private var profileDatabaseEdiTextBaseline = ""
+        private var profileStoredDatabaseEdiBaseline: String? = null
 
         val component: JComponent = profileFields.createComponent(
             message("configuration.database.profile"),
@@ -686,6 +690,7 @@ class ConfigurationPanel(
                 resetProfileAction,
                 manageProfilesAction,
             ),
+            showDatabaseEdi = keys.databaseEdi != null,
         ).apply { border = JBUI.Borders.empty(12) }
 
         init {
@@ -741,7 +746,7 @@ class ConfigurationPanel(
                 updateQuickActions()
                 update()
             }
-            listOf(port, database).forEach { it.document.onChange(::connectionChanged) }
+            listOf(port, database, databaseEdi).forEach { it.document.onChange(::connectionChanged) }
             username.document.onChange(::profileValueChanged)
             password.document.onChange(::profileValueChanged)
         }
@@ -757,6 +762,7 @@ class ConfigurationPanel(
             })
             port.text = (parsed?.port ?: 3306).toString()
             database.text = keys.database?.let(document::value)?.takeIf { it.isNotEmpty() } ?: parsed?.database.orEmpty()
+            databaseEdi.text = keys.databaseEdi?.let(document::value).orEmpty()
             override.isSelected = state.overrideGlobalCredentials
             username.text = keys.usernames.firstNotNullOfOrNull(document::value).orEmpty()
             password.text = keys.passwords.firstNotNullOfOrNull(document::value).orEmpty()
@@ -870,10 +876,12 @@ class ConfigurationPanel(
             val selected = selectedProfile() ?: return
             val saved = DatabaseConnectionProfileSettings.getInstance().profiles().firstOrNull { it.id == selected.id } ?: return
             val resetDatabase = if (saved.database.isEmpty()) profileDatabaseTextBaseline else saved.database
+            val resetDatabaseEdi = if (saved.databaseEdi.isEmpty()) profileDatabaseEdiTextBaseline else saved.databaseEdi
             loading = true
             profile.selectedItem = saved
             applyProfile(saved)
             database.text = resetDatabase
+            databaseEdi.text = resetDatabaseEdi
             loading = false
             captureProfileBaseline(saved)
             updateQuickActions()
@@ -904,6 +912,7 @@ class ConfigurationPanel(
                 currentHost(),
                 port.text.toIntOrNull() ?: 0,
                 database.text,
+                databaseEdi.text,
             )
 
         private fun currentHost(): String = hostSelector.host()
@@ -918,6 +927,7 @@ class ConfigurationPanel(
                 currentProfileDatabase(),
                 overrideGlobalCredentials = override.isSelected,
                 id = selectedProfile()?.id.orEmpty(),
+                databaseEdi = currentProfileDatabaseEdi(),
             )
         }
 
@@ -931,6 +941,7 @@ class ConfigurationPanel(
             hostSelector.setHost(selected.host)
             port.text = selected.port.toString()
             if (selected.database.isNotEmpty()) database.text = selected.database
+            if (selected.databaseEdi.isNotEmpty()) databaseEdi.text = selected.databaseEdi
             override.isSelected = selected.overrideGlobalCredentials
             state.overrideGlobalCredentials = selected.overrideGlobalCredentials
             profileDraftCredentials = ProfileDatabaseCredentials.credentials(selected.id) ?: DatabaseCredentials("", "")
@@ -951,9 +962,20 @@ class ConfigurationPanel(
                 database.text
             }
 
+        private fun currentProfileDatabaseEdi(): String =
+            if (profileStoredDatabaseEdiBaseline?.isEmpty() == true &&
+                databaseEdi.text == profileDatabaseEdiTextBaseline
+            ) {
+                ""
+            } else {
+                databaseEdi.text
+            }
+
         private fun captureProfileBaseline(profile: DatabaseConnectionProfile) {
             profileStoredDatabaseBaseline = profile.database
             profileDatabaseTextBaseline = database.text
+            profileStoredDatabaseEdiBaseline = profile.databaseEdi
+            profileDatabaseEdiTextBaseline = databaseEdi.text
             profileBaseline = currentProfile(profile.name)
             profileCredentialsBaseline = profileDraftCredentials
         }
@@ -961,6 +983,8 @@ class ConfigurationPanel(
         private fun captureInferredProfileBaseline(profile: DatabaseConnectionProfile) {
             profileStoredDatabaseBaseline = profile.database
             profileDatabaseTextBaseline = database.text
+            profileStoredDatabaseEdiBaseline = profile.databaseEdi
+            profileDatabaseEdiTextBaseline = databaseEdi.text
             profileBaseline = profile
             val savedCredentials = ProfileDatabaseCredentials.credentials(profile.id) ?: DatabaseCredentials("", "")
             profileCredentialsBaseline = savedCredentials
@@ -973,6 +997,8 @@ class ConfigurationPanel(
             profileDraftCredentials = null
             profileStoredDatabaseBaseline = null
             profileDatabaseTextBaseline = database.text
+            profileStoredDatabaseEdiBaseline = null
+            profileDatabaseEdiTextBaseline = databaseEdi.text
         }
 
         private fun uniqueProfileName(baseName: String): String {
@@ -1021,6 +1047,7 @@ class ConfigurationPanel(
             val selectedDatabase = database.text
             document.setValue(keys.url, MysqlConnection.build(selectedHost, selectedPort, selectedDatabase, query))
             keys.database?.let { document.setValue(it, selectedDatabase) }
+            keys.databaseEdi?.let { document.setValue(it, databaseEdi.text) }
             keys.usernames.forEach { document.setValue(it, username.text) }
             val passwordValue = password.password.concatToString()
             keys.passwords.forEach { document.setValue(it, passwordValue) }
@@ -1257,7 +1284,11 @@ private class ConfigurationTableModel(
 
     private fun logicalRows(document: OrderedProperties): MutableList<LogicalRow> {
         val databaseKeys = schema.database?.let { keys -> buildSet {
-            add(keys.url); keys.database?.let(::add); addAll(keys.usernames); addAll(keys.passwords)
+            add(keys.url)
+            keys.database?.let(::add)
+            keys.databaseEdi?.let(::add)
+            addAll(keys.usernames)
+            addAll(keys.passwords)
         } }.orEmpty()
         val databaseLines = document.lines.filter { it is PropertyLine.Entry && it.key in databaseKeys }
         val environmentLines = document.lines.filter { it is PropertyLine.Entry && it.key == schema.environmentKey }

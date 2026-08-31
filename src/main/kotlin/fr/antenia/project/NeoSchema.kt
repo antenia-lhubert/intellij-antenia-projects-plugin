@@ -5,6 +5,7 @@ data class DatabaseKeys(
     val database: String?,
     val usernames: List<String>,
     val passwords: List<String>,
+    val databaseEdi: String? = null,
 )
 
 data class NeoSchema(
@@ -17,6 +18,7 @@ data class NeoSchema(
         database?.let {
             add(it.url)
             it.database?.let(::add)
+            it.databaseEdi?.let(::add)
             addAll(it.usernames)
             addAll(it.passwords)
         }
@@ -28,7 +30,13 @@ data class NeoSchema(
             NeoProjectType.CORE -> NeoSchema(
                 type,
                 listOf("url", "database", "databaseEdi", "environnement", "usernameNovanet", "passwordNovanet", "usernameSpring", "passwordSpring", "driver", "webapps", "hibernate.show_sql", "hibernate.dialect", "checkoutTimeout", "maxIdleTime", "maxConnectionAge", "acquireIncrement", "maxStatements", "propertyCycle", "unreturnedConnectionTimeout", "autoCommitOnClose", "preferredTestQuery", "switchToManual", "minPoolSizeNormal", "maxPoolSizeNormal", "minPoolSizeSpring", "maxPoolSizeSpring", "smtp", "urlext", "liquibaseEnabled", "neohub.upload.maxfilesize", "neohub.upload.maxgroupedfilesize"),
-                DatabaseKeys("url", "database", listOf("usernameNovanet", "usernameSpring"), listOf("passwordNovanet", "passwordSpring")),
+                DatabaseKeys(
+                    "url",
+                    "database",
+                    listOf("usernameNovanet", "usernameSpring"),
+                    listOf("passwordNovanet", "passwordSpring"),
+                    "databaseEdi",
+                ),
                 "environnement",
             )
             NeoProjectType.GED -> NeoSchema(

@@ -10,6 +10,7 @@ data class DatabaseConnectionProfile(
     val database: String,
     val overrideGlobalCredentials: Boolean = false,
     val id: String = "",
+    val databaseEdi: String = "",
 )
 
 object DatabaseConnectionProfiles {
@@ -30,11 +31,19 @@ object DatabaseConnectionProfiles {
         host: String,
         port: Int,
         database: String,
-    ): DatabaseConnectionProfile? = profiles.firstOrNull {
-        it.host.equals(host, ignoreCase = true) && it.port == port && it.database.isNotEmpty() && it.database == database
-    } ?: profiles.firstOrNull {
-        it.host.equals(host, ignoreCase = true) && it.port == port && it.database.isEmpty()
-    }
+        databaseEdi: String = "",
+    ): DatabaseConnectionProfile? = profiles.withIndex()
+        .filter { (_, profile) ->
+            profile.host.equals(host, ignoreCase = true) && profile.port == port &&
+                (profile.database.isEmpty() || profile.database == database) &&
+                (profile.databaseEdi.isEmpty() || profile.databaseEdi == databaseEdi)
+        }
+        .maxWithOrNull(
+            compareBy<IndexedValue<DatabaseConnectionProfile>> {
+                (if (it.value.database.isNotEmpty()) 1 else 0) + (if (it.value.databaseEdi.isNotEmpty()) 1 else 0)
+            }.thenByDescending { it.index },
+        )
+        ?.value
 
     fun customOnly(profiles: List<DatabaseConnectionProfile>): List<DatabaseConnectionProfile> {
         val customNames = mutableSetOf<String>()

@@ -76,6 +76,50 @@ class DatabaseConnectionProfileSettingsTest {
     }
 
     @Test
+    fun `matches the most specific database EDI profile`() {
+        val profiles = listOf(
+            DatabaseConnectionProfile("Host only", "mysql.example.com", 3306, ""),
+            DatabaseConnectionProfile("Neo", "mysql.example.com", 3306, "neo"),
+            DatabaseConnectionProfile(
+                "Neo EDI",
+                "mysql.example.com",
+                3306,
+                "neo",
+                databaseEdi = "neo_edi",
+            ),
+        )
+
+        assertEquals(
+            "Neo EDI",
+            DatabaseConnectionProfiles.matching(profiles, "mysql.example.com", 3306, "neo", "neo_edi")?.name,
+        )
+        assertEquals(
+            "Neo",
+            DatabaseConnectionProfiles.matching(profiles, "mysql.example.com", 3306, "neo", "other_edi")?.name,
+        )
+    }
+
+    @Test
+    fun `persists the optional database EDI value`() {
+        val settings = DatabaseConnectionProfileSettings()
+        settings.replaceProfiles(
+            listOf(
+                DatabaseConnectionProfile(
+                    "Neo EDI",
+                    "mysql.example.com",
+                    3306,
+                    "neo",
+                    databaseEdi = "neo_edi",
+                ),
+            ),
+        )
+
+        val stored = settings.getState().profiles.single()
+        assertEquals("neo_edi", stored.databaseEdi)
+        assertEquals("neo_edi", stored.toProfile().databaseEdi)
+    }
+
+    @Test
     fun `merges provided and unique custom hosts`() {
         val settings = DatabaseConnectionProfileSettings()
 

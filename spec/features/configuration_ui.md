@@ -28,7 +28,7 @@ Global database credentials should contain only a username and password; connect
 Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
 
 Users should be able to manage reusable database connection profiles in `Settings > Tools > Antenia > Database > Database Profiles`.
-A profile contains a unique name, host, port, optional database, and the global-credential override section.
+A profile contains a unique name, host, port, optional database, optional advanced `databaseEdi`, and the global-credential override section.
 The override decision is stored with the profile. Profile override credentials are stored in IntelliJ Password Safe and never in plugin state XML.
 Profile names are unique case-insensitively. Custom profiles are stored globally and can be created, edited, deleted, and cloned.
 No profiles are provided by the plugin. The selector automatically displays a user profile when its connection details match the project, and remains empty when none matches.
@@ -61,10 +61,11 @@ DB Credentials form should have:
 - host (free input so that user can put in an unknown host)
 - port (defaults to 3306)
 - database
+- an optional advanced `databaseEdi` field for project types that support it
 - have the option to override global credentials
 - disabling the override should retain the project credentials securely so they are restored when the override is enabled again
 
-Selecting a profile copies its connection details into the project form. A profile without a database keeps the current project database.
+Selecting a profile copies its connection details into the project form. A profile without a database or `databaseEdi` keeps the corresponding current project value.
 The form infers a user profile from matching connection details. Directly editing a selected profile keeps it selected so the edited values can be saved.
 Selecting or resetting a profile applies its credential override decision and securely stored override credentials. Automatically matching a profile marks it active without overwriting the project's current credential section; differences can then be saved to or reset from the profile.
 An edited active profile has a reset action that restores all connection and credential fields from the saved profile.
