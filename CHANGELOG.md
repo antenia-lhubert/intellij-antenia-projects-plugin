@@ -10,6 +10,7 @@ Version names retain the snapshot identifiers used by the repository.
 ### Fixed
 
 - Keep Neo Configuration controls visible when the tool window's `Show Toolbar` option is disabled.
+- Keep the Neo Configuration footer limited to the project type and a clickable configuration-file path, with errors shown as notifications.
 
 ## [1.0.8-SNAPSHOT] - 2026-08-20
 

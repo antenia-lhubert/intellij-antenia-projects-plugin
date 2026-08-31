@@ -7,6 +7,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -22,14 +23,14 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.io.FileUtil
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
-import com.intellij.ui.JBColor
+import com.intellij.ui.HyperlinkLabel
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.ToolbarDecorator
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
@@ -70,6 +71,7 @@ import fr.antenia.settings.AnteniaConfigurable
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Component
+import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
@@ -99,7 +101,7 @@ class ConfigurationPanel(
     private val schema = NeoSchema.forType(neoProject.type)
     private val state = ProjectConfigurationState.getInstance(project)
     private lateinit var document: OrderedProperties
-    private lateinit var file: Path
+    private val file = ConfigurationFiles.propertyPath(project, neoProject.type)
     private var changingFile = false
     private var model = ConfigurationTableModel(schema) {
         ApplicationManager.getApplication().invokeLater(::persist, ModalityState.defaultModalityState())
@@ -128,7 +130,6 @@ class ConfigurationPanel(
     private val cards = JPanel(CardLayout())
     private val databaseForm = schema.database?.let { DatabaseForm(it) }
     private val environmentForm = schema.environmentKey?.let { EnvironmentForm(it) }
-    private val status = JBLabel()
     private val searchField = SearchTextField(false)
     private val searchStatus = JBLabel()
     private var searchMatches = emptyList<Int>()
@@ -142,7 +143,7 @@ class ConfigurationPanel(
         border = JBUI.Borders.empty(8)
         add(createHeader(), BorderLayout.NORTH)
         add(createEditor(), BorderLayout.CENTER)
-        add(status, BorderLayout.SOUTH)
+        add(createFooter(), BorderLayout.SOUTH)
     }
 
     init {
@@ -280,7 +281,7 @@ class ConfigurationPanel(
             })
             add(Separator.getInstance())
             add(object : AnAction(message("configuration.reapply.accessible.name"), message("configuration.reapply.tooltip"), AllIcons.Actions.Refresh) {
-                override fun actionPerformed(event: AnActionEvent) = runStartupActions(message("configuration.reapply.success"))
+                override fun actionPerformed(event: AnActionEvent) = runStartupActions()
                 override fun update(event: AnActionEvent) { event.presentation.isEnabled = !setupRunning }
                 override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
@@ -307,24 +308,21 @@ class ConfigurationPanel(
         ShowSettingsUtil.getInstance().showSettingsDialog(project, AnteniaConfigurable::class.java)
     }
 
-    private fun runStartupActions(successMessage: String) {
+    private fun runStartupActions() {
         setupRunning = true
         UIUtil.setEnabled(editorSplitter, false, true)
-        status.icon = AnimatedIcon.Default()
-        status.text = message("configuration.reapply.progress")
-        status.foreground = UIUtil.getLabelForeground()
         AnteniaStartupActions.reapply(project) { succeeded ->
             if (project.isDisposed) return@reapply
             setupRunning = false
-            status.icon = null
             UIUtil.setEnabled(editorSplitter, true, true)
             reloadFromDisk()
-            if (succeeded) {
-                status.text = successMessage
-                status.foreground = UIUtil.getLabelForeground()
-            } else {
-                status.text = message("configuration.reapply.failure")
-                status.foreground = JBColor.RED
+            if (!succeeded) {
+                AnteniaNotifications.failure(
+                    project,
+                    "configuration-reapply",
+                    message("configuration.reapply.failure.title"),
+                    message("configuration.reapply.failure"),
+                )
             }
         }
     }
@@ -351,7 +349,7 @@ class ConfigurationPanel(
         } finally {
             changingFile = false
         }
-        runStartupActions(message("configuration.project.reset.success"))
+        runStartupActions()
     }
 
     private fun updateSearch(selectFirst: Boolean) {
@@ -473,12 +471,9 @@ class ConfigurationPanel(
 
     private fun reloadFromDisk() {
         runCatching {
-            file = ConfigurationFiles.ensureCreated(project, neoProject.type)
+            ConfigurationFiles.ensureCreated(project, neoProject.type)
             load(ConfigurationFiles.read(file))
             DatabaseProfileSynchronizer.update(project, neoProject)
-            val relativeFile = project.basePath?.let { runCatching { Path.of(it).relativize(file) }.getOrNull() } ?: file.fileName
-            status.text = "${neoProject.type.displayName} | $relativeFile"
-            status.toolTipText = file.toString()
         }.onFailure {
             logger.warn("Unable to load Neo configuration for '${project.name}'", it)
             AnteniaNotifications.failure(
@@ -487,8 +482,6 @@ class ConfigurationPanel(
                 message("configuration.load.failure.title"),
                 message("common.error.details", it.message ?: it.javaClass.simpleName),
             )
-            status.text = message("configuration.load.failure.status", it.message ?: it.javaClass.simpleName)
-            status.foreground = JBColor.RED
         }
     }
 
@@ -518,8 +511,6 @@ class ConfigurationPanel(
                 runCatching { DatabaseProfileSynchronizer.update(project, neoProject) }
                     .onFailure { reportFailure("database-profile-update", message("configuration.database.profile.failure.title"), it) }
             }, 500)
-            status.text = message("configuration.save.success", file)
-            status.foreground = UIUtil.getLabelForeground()
             logger.debug("Saved Neo configuration for '${project.name}': $file")
         } catch (exception: Exception) {
             reportFailure("configuration-save", message("configuration.save.failure.title"), exception)
@@ -547,7 +538,33 @@ class ConfigurationPanel(
     }
 
     private fun isConfigurationFile(path: String): Boolean =
-        ::file.isInitialized && FileUtil.pathsEqual(path, file.toString())
+        FileUtil.pathsEqual(path, file.toString())
+
+    private fun createFooter(): JComponent {
+        val relativeFile = project.basePath
+            ?.let { runCatching { Path.of(it).relativize(file) }.getOrNull() }
+            ?: file.fileName
+        val fileLink = HyperlinkLabel(relativeFile.toString()).apply {
+            toolTipText = file.toString()
+            accessibleContext.accessibleName = message("configuration.file.open.accessible.name", relativeFile)
+            addHyperlinkListener { openConfigurationFile() }
+        }
+        return JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            isOpaque = false
+            add(JBLabel("${neoProject.type.displayName} | "))
+            add(fileLink)
+        }
+    }
+
+    private fun openConfigurationFile() {
+        try {
+            val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(file)
+                ?: error(message("configuration.file.unavailable", file))
+            FileEditorManager.getInstance(project).openFile(virtualFile, true)
+        } catch (exception: Exception) {
+            reportFailure("configuration-open", message("configuration.file.open.failure.title"), exception)
+        }
+    }
 
     private fun showSelectedForm() {
         val card = when (model.rowAt(table.selectedRow)) {
@@ -575,8 +592,6 @@ class ConfigurationPanel(
             title,
             message("common.error.details", exception.message ?: exception.javaClass.simpleName),
         )
-        status.text = message("configuration.failure.status", title, exception.message ?: exception.javaClass.simpleName)
-        status.foreground = JBColor.RED
     }
 
     private fun databaseKeys(keys: DatabaseKeys): Set<String> = buildSet {

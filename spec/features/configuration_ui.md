@@ -18,6 +18,9 @@ Configuration UI should sync with the config file (both ways) be live applied.
 
 Configuration UI should be a tool window.
 Its embedded toolbar controls should remain visible when the tool window's `Show Toolbar` option is disabled.
+Its footer should always contain only the detected project type and the configuration file path.
+The configuration file path should be a hyperlink that opens the file in the editor.
+Errors should be displayed as notifications rather than replacing the footer contents.
 
 User should be able to configure global database credentials that are safely stored and usable across projects.
 (global configuration should be done in a separate UI in `Settings > Tools > Antenia > Database > Credentials`)
