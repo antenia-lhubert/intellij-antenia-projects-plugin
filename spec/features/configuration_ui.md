@@ -17,6 +17,7 @@ Adding a key should have known key autocompletion.
 Configuration UI should sync with the config file (both ways) be live applied.
 
 Configuration UI should be a tool window.
+Its embedded toolbar controls should remain visible when the tool window's `Show Toolbar` option is disabled.
 
 User should be able to configure global database credentials that are safely stored and usable across projects.
 (global configuration should be done in a separate UI in `Settings > Tools > Antenia > Database > Credentials`)

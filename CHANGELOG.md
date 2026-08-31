@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep Neo Configuration controls visible when the tool window's `Show Toolbar` option is disabled.
+
 ## [1.0.8-SNAPSHOT] - 2026-08-20
 
 ### Fixed
