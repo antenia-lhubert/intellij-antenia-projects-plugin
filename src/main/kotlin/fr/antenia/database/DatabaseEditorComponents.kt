@@ -20,6 +20,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import fr.antenia.MyMessageBundle.message
+import fr.antenia.project.DatabaseProperty
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -132,7 +133,6 @@ internal class DatabaseProfileFields(
     val hostSelector = DatabaseHostSelector(saveHostTooltip, manageHostsTooltip, manageHosts)
     val portField = JBTextField("3306")
     val databaseField = JBTextField()
-    val databaseEdiField = JBTextField()
     val overrideField = JBCheckBox(message("configuration.database.override")).apply {
         accessibleContext.accessibleName = message("configuration.database.override.accessible.name")
     }
@@ -149,7 +149,8 @@ internal class DatabaseProfileFields(
         primaryComponent: JComponent,
         title: String? = null,
         primaryActions: List<DatabaseEditorAction> = emptyList(),
-        showDatabaseEdi: Boolean = true,
+        projectTypeComponent: JComponent? = null,
+        advancedComponent: JComponent? = null,
     ): JComponent {
         val builder = FormBuilder.createFormBuilder()
         title?.let {
@@ -157,18 +158,14 @@ internal class DatabaseProfileFields(
         }
         builder
             .addLabeledComponent(primaryLabel, boundedActionField(primaryComponent, *primaryActions.toTypedArray()))
+        projectTypeComponent?.let {
+            builder.addLabeledComponent(message("database.profiles.project.type"), boundedActionField(it))
+        }
+        builder
             .addLabeledComponent(message("database.profiles.host"), hostSelector.component)
             .addLabeledComponent(message("database.profiles.port"), boundedActionField(portField))
             .addLabeledComponent(message("database.profiles.database"), boundedActionField(databaseField))
-        if (showDatabaseEdi) {
-            builder.addComponent(panel {
-                collapsibleGroup(message("database.profiles.advanced")) {
-                    row(message("database.profiles.database.edi")) {
-                        cell(boundedActionField(databaseEdiField))
-                    }
-                }
-            })
-        }
+        advancedComponent?.let(builder::addComponent)
         return builder
             .addComponent(boundedActionField(JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
                 isOpaque = false
@@ -217,10 +214,36 @@ internal class DatabaseProfileFields(
         portField.isEditable = enabled
         databaseField.isEnabled = enabled
         databaseField.isEditable = enabled
-        databaseEdiField.isEnabled = enabled
-        databaseEdiField.isEditable = enabled
         overrideField.isEnabled = enabled
         updateCredentialFields(enabled)
+    }
+}
+
+internal class DatabaseAdvancedFields(properties: List<DatabaseProperty>) {
+    val fields: Map<String, JBTextField> = properties.associate { property ->
+        property.key to JBTextField().apply { accessibleContext.accessibleName = property.key }
+    }
+    val component: JComponent = panel {
+        collapsibleGroup(message("database.profiles.advanced")) {
+            properties.forEach { property ->
+                row("${property.key}:") {
+                    cell(boundedActionField(requireNotNull(fields[property.key])))
+                }
+            }
+        }
+    }
+
+    fun values(): Map<String, String> = fields.mapValues { it.value.text }
+
+    fun setValues(values: Map<String, String>) {
+        fields.forEach { (key, field) -> field.text = values[key].orEmpty() }
+    }
+
+    fun setEnabled(enabled: Boolean) {
+        fields.values.forEach {
+            it.isEnabled = enabled
+            it.isEditable = enabled
+        }
     }
 }
 

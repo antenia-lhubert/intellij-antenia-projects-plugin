@@ -8,6 +8,7 @@ import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.openapi.util.Disposer
@@ -15,12 +16,16 @@ import com.intellij.ui.JBSplitter
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import fr.antenia.MyMessageBundle.message
 import fr.antenia.credentials.DatabaseCredentials
 import fr.antenia.credentials.ProfileDatabaseCredentials
+import fr.antenia.project.NeoProjectType
+import fr.antenia.project.NeoSchema
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Component
 import java.util.Locale
 import javax.swing.AbstractListModel
@@ -50,10 +55,32 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
     private val hostSelector = profileFields.hostSelector
     private val portField = profileFields.portField
     private val databaseField = profileFields.databaseField
-    private val databaseEdiField = profileFields.databaseEdiField
     private val overrideField = profileFields.overrideField
     private val usernameField = profileFields.usernameField
     private val passwordField = profileFields.passwordField
+    private val typeOptions = listOf(
+        ProfileTypeOption(NeoProjectType.CORE, NeoProjectType.CORE.displayName),
+        ProfileTypeOption(NeoProjectType.GED, NeoProjectType.GED.displayName),
+    )
+    private val projectTypeField = ComboBox(typeOptions.toTypedArray()).apply {
+        renderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>?,
+                value: Any?,
+                index: Int,
+                selected: Boolean,
+                focus: Boolean,
+            ): Component = super.getListCellRendererComponent(list, value, index, selected, focus).also {
+                text = (value as? ProfileTypeOption)?.label.orEmpty()
+            }
+        }
+    }
+    private val advancedFields = listOf(NeoProjectType.CORE, NeoProjectType.GED).associateWith { type ->
+        DatabaseAdvancedFields(requireNotNull(NeoSchema.forType(type).database).advanced)
+    }
+    private val advancedCards = JPanel(CardLayout()).apply {
+        advancedFields.forEach { (type, fields) -> add(fields.component, type.name) }
+    }
     private var component: JComponent? = null
     private var uiDisposable: Disposable? = null
     private var updatingFields = false
@@ -91,7 +118,12 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
                 override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
             })
             .createPanel()
-        val details = profileFields.createComponent(message("database.profiles.name"), nameField).apply {
+        val details = profileFields.createComponent(
+            message("database.profiles.name"),
+            nameField,
+            projectTypeComponent = projectTypeField,
+            advancedComponent = advancedCards,
+        ).apply {
             border = JBUI.Borders.emptyLeft(8)
             minimumSize = java.awt.Dimension(0, 0)
         }
@@ -101,7 +133,10 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             add(
                 JBSplitter(false, 0.35f).apply {
                     firstComponent = profileMaster
-                    secondComponent = details
+                    secondComponent = JBScrollPane(details).apply {
+                        border = JBUI.Borders.empty()
+                        horizontalScrollBarPolicy = javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+                    }
                     splitterProportionKey = "fr.antenia.databaseProfiles.splitter"
                 },
                 BorderLayout.CENTER,
@@ -163,7 +198,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         hostSelector.comboBox.accessibleContext.accessibleName = message("database.profiles.host")
         portField.accessibleContext.accessibleName = message("database.profiles.port")
         databaseField.accessibleContext.accessibleName = message("database.profiles.database")
-        databaseEdiField.accessibleContext.accessibleName = message("database.profiles.database.edi")
+        projectTypeField.accessibleContext.accessibleName = message("database.profiles.project.type")
         overrideField.accessibleContext.accessibleName = message("database.profiles.override")
         usernameField.accessibleContext.accessibleName = message("database.profiles.username")
         passwordField.accessibleContext.accessibleName = message("database.profiles.password")
@@ -180,9 +215,16 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         databaseField.document.addDocumentListener(fieldListener {
             model.rowAt(profileList.selectedIndex)?.database = databaseField.text
         })
-        databaseEdiField.document.addDocumentListener(fieldListener {
-            model.rowAt(profileList.selectedIndex)?.databaseEdi = databaseEdiField.text
-        })
+        projectTypeField.addActionListener {
+            if (!updatingFields) updateSelectedProjectType()
+        }
+        advancedFields.forEach { (type, fields) ->
+            fields.fields.forEach { (key, field) ->
+                field.document.addDocumentListener(fieldListener {
+                    model.rowAt(profileList.selectedIndex)?.takeIf { it.projectType == type }?.advancedValues?.set(key, field.text)
+                })
+            }
+        }
         overrideField.addActionListener {
             if (!updatingFields) {
                 model.rowAt(profileList.selectedIndex)?.overrideGlobalCredentials = overrideField.isSelected
@@ -231,6 +273,8 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
                 3306,
                 "",
                 id = DatabaseConnectionProfiles.newId(),
+                projectType = NeoProjectType.CORE,
+                advancedValues = DatabaseConnectionProfiles.defaultAdvancedValues(NeoProjectType.CORE),
             ),
         )
         selectAndFocusName(row)
@@ -269,7 +313,14 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         hostSelector.setHost(selected?.host.orEmpty())
         portField.text = selected?.port.orEmpty()
         databaseField.text = selected?.database.orEmpty()
-        databaseEdiField.text = selected?.databaseEdi.orEmpty()
+        projectTypeField.selectedItem = typeOptions.first { it.type == (selected?.projectType ?: NeoProjectType.CORE) }
+        advancedFields.forEach { (type, fields) ->
+            val values = if (selected?.projectType == type) selected.advancedValues else {
+                DatabaseConnectionProfiles.defaultAdvancedValues(type)
+            }
+            fields.setValues(values)
+        }
+        showAdvancedFields(selected?.projectType ?: NeoProjectType.CORE)
         overrideField.isSelected = selected?.overrideGlobalCredentials == true
         usernameField.text = selected?.username.orEmpty()
         passwordField.text = selected?.password.orEmpty()
@@ -277,7 +328,27 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         val editable = selected != null
         nameField.isEnabled = selected != null
         nameField.isEditable = editable
+        projectTypeField.isEnabled = editable
         profileFields.setEnabled(editable)
+        advancedFields.forEach { (type, fields) -> fields.setEnabled(selected?.projectType == type) }
+    }
+
+    private fun updateSelectedProjectType() {
+        val selected = model.rowAt(profileList.selectedIndex) ?: return
+        val type = (projectTypeField.selectedItem as? ProfileTypeOption)?.type ?: return
+        selected.projectType = type
+        val defaults = DatabaseConnectionProfiles.defaultAdvancedValues(type)
+        selected.advancedValues = (defaults + selected.advancedValues.filterKeys(defaults::containsKey)).toMutableMap()
+        updatingFields = true
+        advancedFields.getValue(type).setValues(selected.advancedValues)
+        updatingFields = false
+        showAdvancedFields(type)
+        advancedFields.forEach { (fieldType, fields) -> fields.setEnabled(fieldType == type) }
+        model.changed(profileList.selectedIndex)
+    }
+
+    private fun showAdvancedFields(type: NeoProjectType) {
+        (advancedCards.layout as CardLayout).show(advancedCards, type.name)
     }
 
     private fun uniqueProfileName(baseName: String): String {
@@ -316,7 +387,7 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             focus: Boolean,
         ): Component {
             val component = super.getListCellRendererComponent(list, value, index, selected, focus)
-            text = (value as? EditableProfile)?.name.orEmpty()
+            text = (value as? EditableProfile)?.let { "${it.name} (${it.projectType.displayName})" }.orEmpty()
             return component
         }
     }
@@ -370,7 +441,8 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
         var host: String,
         var port: String,
         var database: String,
-        var databaseEdi: String,
+        var projectType: NeoProjectType,
+        var advancedValues: MutableMap<String, String>,
         var overrideGlobalCredentials: Boolean,
         val id: String,
         var username: String,
@@ -383,7 +455,8 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             profile.host,
             profile.port.toString(),
             profile.database,
-            profile.databaseEdi,
+            profile.projectType,
+            profile.advancedValues.toMutableMap(),
             profile.overrideGlobalCredentials,
             profile.id,
             credentials.username,
@@ -399,7 +472,8 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             database = database,
             overrideGlobalCredentials = overrideGlobalCredentials,
             id = id,
-            databaseEdi = databaseEdi,
+            projectType = projectType,
+            advancedValues = advancedValues.toMap(),
         )
 
         fun credentialsModified(): Boolean = username != savedUsername || password != savedPassword
@@ -409,4 +483,6 @@ class DatabaseConnectionProfilesConfigurable : SearchableConfigurable {
             savedPassword = password
         }
     }
+
+    private data class ProfileTypeOption(val type: NeoProjectType, val label: String)
 }

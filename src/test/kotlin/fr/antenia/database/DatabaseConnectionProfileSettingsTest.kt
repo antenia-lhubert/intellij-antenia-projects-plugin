@@ -1,5 +1,6 @@
 package fr.antenia.database
 
+import fr.antenia.project.NeoProjectType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,7 +34,7 @@ class DatabaseConnectionProfileSettingsTest {
 
         val profiles = settings.getState().profiles.map { it.toProfile() }
         assertEquals(
-            listOf(DatabaseConnectionProfile("Team", "team.example.com", 3307, "neo")),
+            listOf(DatabaseConnectionProfiles.normalized(DatabaseConnectionProfile("Team", "team.example.com", 3307, "neo"))),
             profiles.map { it.copy(id = "") },
         )
         assertTrue(profiles.single().id.isNotBlank())
@@ -57,7 +58,11 @@ class DatabaseConnectionProfileSettingsTest {
 
         val profiles = settings.profiles()
         assertEquals(
-            listOf(DatabaseConnectionProfile("Local", "localhost", 3307, "neo", overrideGlobalCredentials = true)),
+            listOf(
+                DatabaseConnectionProfiles.normalized(
+                    DatabaseConnectionProfile("Local", "localhost", 3307, "neo", overrideGlobalCredentials = true),
+                ),
+            ),
             profiles.map { it.copy(id = "") },
         )
         assertTrue(profiles.single().id.isNotBlank())
@@ -71,36 +76,45 @@ class DatabaseConnectionProfileSettingsTest {
             DatabaseConnectionProfile("Neo", "mysql.example.com", 3306, "neo"),
         )
 
-        assertEquals("Neo", DatabaseConnectionProfiles.matching(profiles, "MYSQL.EXAMPLE.COM", 3306, "neo")?.name)
-        assertEquals("Host only", DatabaseConnectionProfiles.matching(profiles, "mysql.example.com", 3306, "other")?.name)
+        assertEquals(
+            "Neo",
+            DatabaseConnectionProfiles.matching(profiles, NeoProjectType.CORE, "MYSQL.EXAMPLE.COM", 3306, "neo")?.name,
+        )
+        assertEquals(
+            "Host only",
+            DatabaseConnectionProfiles.matching(profiles, NeoProjectType.CORE, "mysql.example.com", 3306, "other")?.name,
+        )
     }
 
     @Test
-    fun `matches the most specific database EDI profile`() {
+    fun `matches profiles by connection details without comparing advanced values`() {
         val profiles = listOf(
             DatabaseConnectionProfile("Host only", "mysql.example.com", 3306, ""),
-            DatabaseConnectionProfile("Neo", "mysql.example.com", 3306, "neo"),
             DatabaseConnectionProfile(
-                "Neo EDI",
+                "Neo custom pool",
                 "mysql.example.com",
                 3306,
                 "neo",
-                databaseEdi = "neo_edi",
+                projectType = NeoProjectType.CORE,
+                advancedValues = DatabaseConnectionProfiles.defaultAdvancedValues(NeoProjectType.CORE) +
+                    ("checkoutTimeout" to "20000"),
             ),
         )
 
         assertEquals(
-            "Neo EDI",
-            DatabaseConnectionProfiles.matching(profiles, "mysql.example.com", 3306, "neo", "neo_edi")?.name,
-        )
-        assertEquals(
-            "Neo",
-            DatabaseConnectionProfiles.matching(profiles, "mysql.example.com", 3306, "neo", "other_edi")?.name,
+            "Neo custom pool",
+            DatabaseConnectionProfiles.matching(
+                profiles,
+                NeoProjectType.CORE,
+                "mysql.example.com",
+                3306,
+                "neo",
+            )?.name,
         )
     }
 
     @Test
-    fun `persists the optional database EDI value`() {
+    fun `persists typed advanced values`() {
         val settings = DatabaseConnectionProfileSettings()
         settings.replaceProfiles(
             listOf(
@@ -109,14 +123,61 @@ class DatabaseConnectionProfileSettingsTest {
                     "mysql.example.com",
                     3306,
                     "neo",
-                    databaseEdi = "neo_edi",
+                    projectType = NeoProjectType.CORE,
+                    advancedValues = mapOf("databaseEdi" to "neo_edi", "checkoutTimeout" to "20000"),
                 ),
             ),
         )
 
         val stored = settings.getState().profiles.single()
-        assertEquals("neo_edi", stored.databaseEdi)
-        assertEquals("neo_edi", stored.toProfile().databaseEdi)
+        assertEquals("CORE", stored.projectType)
+        assertEquals("neo_edi", stored.toProfile().advancedValues["databaseEdi"])
+        assertEquals("20000", stored.toProfile().advancedValues["checkoutTimeout"])
+        assertFalse(stored.toProfile().advancedValues.containsKey("WebActionUrlDataBase"))
+    }
+
+    @Test
+    fun `filters profiles by project type`() {
+        val core = DatabaseConnectionProfile("Core", "mysql.example.com", 3306, "")
+        val ged = core.copy(name = "GED", projectType = NeoProjectType.GED)
+
+        assertEquals(listOf("Core"), DatabaseConnectionProfiles.applicable(listOf(core, ged), NeoProjectType.CORE).map { it.name })
+        assertEquals(listOf("GED"), DatabaseConnectionProfiles.applicable(listOf(core, ged), NeoProjectType.GED).map { it.name })
+    }
+
+    @Test
+    fun `migrates every untyped legacy profile to Core`() {
+        val stored = DatabaseConnectionProfileSettings.StoredProfile().apply {
+            name = "Legacy Core"
+            host = "mysql.example.com"
+        }
+
+        val profile = stored.toProfile()
+
+        assertEquals(NeoProjectType.CORE, profile.projectType)
+        assertEquals("", profile.advancedValues["databaseEdi"])
+        assertEquals("10000", profile.advancedValues["checkoutTimeout"])
+    }
+
+    @Test
+    fun `preserves database EDI while migrating a legacy profile`() {
+        val stored = DatabaseConnectionProfileSettings.StoredProfile().apply {
+            databaseEdi = "neo_edi"
+        }
+
+        assertEquals("neo_edi", stored.toProfile().advancedValues["databaseEdi"])
+    }
+
+    @Test
+    fun `migrates an unsupported persisted project type to Core`() {
+        val stored = DatabaseConnectionProfileSettings.StoredProfile().apply {
+            projectType = "SELFCARE"
+        }
+
+        val profile = stored.toProfile()
+
+        assertEquals(NeoProjectType.CORE, profile.projectType)
+        assertEquals("com.mysql.jdbc.Driver", profile.advancedValues["driver"])
     }
 
     @Test

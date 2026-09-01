@@ -6,6 +6,11 @@ sealed interface PropertyLine {
     data class Entry(var key: String, var value: String) : PropertyLine
 }
 
+data class PropertyLayoutGroup(
+    val keys: List<String>,
+    val heading: String? = null,
+)
+
 data class OrderedProperties(
     val lines: MutableList<PropertyLine>,
     val newline: String = System.lineSeparator(),
@@ -18,6 +23,27 @@ data class OrderedProperties(
         if (entry != null) entry.value = value else lines.add(PropertyLine.Entry(key, value))
     }
 
+    fun setValueInGroup(key: String, value: String, group: List<String>) {
+        val entry = lines.filterIsInstance<PropertyLine.Entry>().lastOrNull { it.key == key }
+        if (entry != null) {
+            entry.value = value
+            return
+        }
+
+        val keyPosition = group.indexOf(key)
+        require(keyPosition >= 0) { "Database layout group does not contain '$key'" }
+        val next = lines.indices.firstOrNull { index ->
+            val line = lines[index]
+            line is PropertyLine.Entry && line.key in group.drop(keyPosition + 1)
+        }
+        val previous = lines.indices.lastOrNull { index ->
+            val line = lines[index]
+            line is PropertyLine.Entry && line.key in group.take(keyPosition)
+        }
+        val insertion = next ?: previous?.plus(1) ?: (lines.indexOfLast { it is PropertyLine.Entry } + 1)
+        lines.add(insertion, PropertyLine.Entry(key, value))
+    }
+
     fun regroup(keys: Set<String>) {
         val indexed = lines.withIndex().filter { (_, line) -> line is PropertyLine.Entry && line.key in keys }
         if (indexed.size < 2) return
@@ -25,6 +51,72 @@ data class OrderedProperties(
         val entries = indexed.map { it.value }
         indexed.asReversed().forEach { lines.removeAt(it.index) }
         lines.addAll(first.coerceAtMost(lines.size), entries)
+    }
+
+    fun groupedLines(groups: List<PropertyLayoutGroup>): List<PropertyLine> =
+        groupedIndexBlocks(groups).flatten().map(lines::get)
+
+    fun regroupPreservingLayout(groups: List<PropertyLayoutGroup>) {
+        val blocks = groupedIndexBlocks(groups).filter(List<Int>::isNotEmpty)
+        val indices = blocks.flatten()
+        if (indices.size < 2) return
+        val insertion = indices.min()
+        val grouped = buildList {
+            blocks.forEach { block ->
+                val blockLines = block.map(lines::get)
+                if (isNotEmpty() && last() !is PropertyLine.Blank && blockLines.first() !is PropertyLine.Blank) {
+                    add(PropertyLine.Blank())
+                }
+                addAll(blockLines)
+            }
+        }
+        indices.sortedDescending().forEach(lines::removeAt)
+        lines.addAll(insertion.coerceAtMost(lines.size), grouped)
+    }
+
+    private fun groupedIndexBlocks(groups: List<PropertyLayoutGroup>): List<List<Int>> {
+        val duplicateKeys = groups.flatMap { it.keys }.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+        require(duplicateKeys.isEmpty()) { "Property layout groups overlap: ${duplicateKeys.joinToString()}" }
+        val ownedByGroup = mutableMapOf<Int, Int>()
+        val groupEntries = groups.mapIndexed { groupIndex, group ->
+            lines.indices.filter { index ->
+                val line = lines[index]
+                line is PropertyLine.Entry && line.key in group.keys
+            }.also { entries -> entries.forEach { ownedByGroup[it] = groupIndex } }
+        }
+        val groupHeadings = groups.mapIndexed { groupIndex, group ->
+            group.heading?.takeIf { groupEntries[groupIndex].isNotEmpty() }?.let { heading ->
+                groupEntries[groupIndex].firstNotNullOfOrNull { entry ->
+                    (entry - 1 downTo 0).firstOrNull { lines[it] !is PropertyLine.Blank }?.takeIf { index ->
+                        val line = lines[index]
+                        line is PropertyLine.Comment && line.raw.trim() == heading.trim()
+                    }
+                }?.also { ownedByGroup[it] = groupIndex }
+            }
+        }
+        val groupBlanks = groups.indices.associateWith { mutableListOf<Int>() }
+        lines.indices.filter { lines[it] is PropertyLine.Blank }.forEach { blank ->
+            val previous = (blank - 1 downTo 0).firstOrNull { lines[it] !is PropertyLine.Blank }
+            val next = (blank + 1 until lines.size).firstOrNull { lines[it] !is PropertyLine.Blank }
+            if (previous in ownedByGroup && next in ownedByGroup) {
+                groupBlanks.getValue(requireNotNull(ownedByGroup[next])).add(blank)
+            }
+        }
+        return groups.indices.map { groupIndex ->
+            val heading = groupHeadings[groupIndex]
+            val entries = groupEntries[groupIndex]
+            val blanks = groupBlanks.getValue(groupIndex)
+            if (heading == null) {
+                (entries + blanks).sorted()
+            } else {
+                val leadingBlanks = blanks.filter { it < heading }
+                buildList {
+                    addAll(leadingBlanks)
+                    add(heading)
+                    addAll((entries + blanks.filter { it >= heading }).sorted())
+                }
+            }
+        }
     }
 }
 

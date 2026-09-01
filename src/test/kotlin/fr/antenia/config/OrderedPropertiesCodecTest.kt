@@ -1,6 +1,7 @@
 package fr.antenia.config
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,6 +38,86 @@ class OrderedPropertiesCodecTest {
         document.regroup(setOf("user", "password"))
 
         assertEquals(listOf("a", "user", "password", "b", "c"), document.lines.filterIsInstance<PropertyLine.Entry>().map { it.key })
+    }
+
+    @Test
+    fun `regroups ordered sections with their comments and blank lines`() {
+        val document = OrderedPropertiesCodec.parse(
+            "outside=1\n# pool\n\nmax=30\nmin=10\nmiddle=2\n# hibernate\n\ndialect=mysql\nshow=false\ntail=3\n",
+        )
+
+        document.regroupPreservingLayout(
+            listOf(
+                PropertyLayoutGroup(listOf("dialect", "show"), "# hibernate"),
+                PropertyLayoutGroup(listOf("min", "max"), "# pool"),
+            ),
+        )
+
+        assertEquals(
+            "outside=1\n# hibernate\n\ndialect=mysql\nshow=false\n\n# pool\n\nmax=30\nmin=10\nmiddle=2\ntail=3\n",
+            OrderedPropertiesCodec.render(document),
+        )
+    }
+
+    @Test
+    fun `inserts a newly added property into its existing commented section without moving a footer`() {
+        val document = OrderedPropertiesCodec.parse("# hibernate\nshow=false\noutside=1\n\n# footer\n")
+        val group = listOf("show", "dialect")
+        document.setValueInGroup("dialect", "mysql", group)
+
+        document.regroupPreservingLayout(listOf(PropertyLayoutGroup(group, "# hibernate")))
+
+        assertEquals(
+            "# hibernate\nshow=false\ndialect=mysql\noutside=1\n\n# footer\n",
+            OrderedPropertiesCodec.render(document),
+        )
+    }
+
+    @Test
+    fun `does not absorb an arbitrary comment or blank before a known group heading`() {
+        val document = OrderedPropertiesCodec.parse("outside=1\n# user note\n\n# hibernate\nshow=false\n")
+        val userComment = document.lines[1]
+        val leadingBlank = document.lines[2]
+        val heading = document.lines[3]
+
+        val grouped = document.groupedLines(
+            listOf(PropertyLayoutGroup(listOf("show"), "# hibernate")),
+        )
+
+        assertFalse(grouped.any { it === userComment })
+        assertFalse(grouped.any { it === leadingBlank })
+        assertTrue(grouped.any { it === heading })
+    }
+
+    @Test
+    fun `does not absorb arbitrary comments between owned entries or groups`() {
+        val document = OrderedPropertiesCodec.parse(
+            "# hibernate\nshow=false\n# keep between entries\ndialect=mysql\n# keep between groups\n# pool\nmin=1\n",
+        )
+        val betweenEntries = document.lines[2]
+        val betweenGroups = document.lines[4]
+
+        val grouped = document.groupedLines(
+            listOf(
+                PropertyLayoutGroup(listOf("show", "dialect"), "# hibernate"),
+                PropertyLayoutGroup(listOf("min"), "# pool"),
+            ),
+        )
+
+        assertFalse(grouped.any { it === betweenEntries })
+        assertFalse(grouped.any { it === betweenGroups })
+    }
+
+    @Test
+    fun `does not claim a matching heading separated from its group by another comment`() {
+        val document = OrderedPropertiesCodec.parse("# hibernate\n# user note\nshow=false\n")
+        val matchingHeading = document.lines[0]
+
+        val grouped = document.groupedLines(
+            listOf(PropertyLayoutGroup(listOf("show"), "# hibernate")),
+        )
+
+        assertFalse(grouped.any { it === matchingHeading })
     }
 
     @Test

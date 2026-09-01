@@ -77,9 +77,11 @@ The database host, port, and database name are always project-specific. The port
 
 ### Database Profiles
 
-Manage reusable connection presets under **Settings > Tools > Antenia > Database > Database Profiles**, or use **Manage...** next to the profile selector in a project's database form. Profiles are user-defined and can be created, edited, deleted, and cloned.
+Manage reusable connection presets under **Settings > Tools > Antenia > Database > Database Profiles**, or use **Manage...** next to the profile selector in a project's database form. Profiles are user-defined, scoped to Core or GED, and can be created, edited, deleted, and cloned. Projects list only profiles for their detected type; profiles created by an older plugin version are migrated to Core.
 
-Profiles contain a name, host, port, optional database, and the credential override section. Profile passwords are stored in IntelliJ Password Safe, never plugin state XML. A matching user profile becomes active automatically without overwriting the project's current credentials; otherwise the selector remains empty. Explicitly selecting or resetting a profile applies its saved values, and an empty profile database preserves the project's existing database. Quick actions update the selected profile, save the connection as another profile, or reset unsaved edits.
+Profiles contain a name, project type, host, port, optional database, type-specific advanced database properties, and the credential override section. Core profiles include the EDI database, driver, Hibernate, connection-pool, SGBD, and Liquibase values; GED profiles include its JDBC driver and Hibernate values. WebAction properties are never part of a database profile. Profile passwords are stored in IntelliJ Password Safe, never plugin state XML. A matching user profile becomes active automatically without overwriting the project's current credentials; otherwise the selector remains empty. Explicitly selecting or resetting a typed profile applies all its saved values, including empty values. Quick actions update the selected profile or reset unsaved edits.
+
+Database properties are regrouped as readable connection, credential, Hibernate, pool, and other database subsections. Known subsection headings and internal blank separators move with the database block; arbitrary comments and leading blank lines remain independent.
 
 The host field remains an editable selector with the three provided Antenia hosts. A host entered manually can be saved directly from the project form and then becomes available as a suggestion across projects. Use **Settings > Tools > Antenia > Database > Database Hosts**, or **Manage...** beside the host selector, to create, edit, or delete custom hosts; provided hosts remain read-only.
 

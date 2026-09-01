@@ -39,7 +39,6 @@ class MysqlConnectionTest {
             database = "database",
             usernames = listOf("usernameNovanet", "usernameSpring"),
             passwords = listOf("passwordNovanet", "passwordSpring"),
-            databaseEdi = null,
         )
 
         assertEquals(DatabaseCredentials("neo-user", "neo-password"), configuredCredentials(document, keys))

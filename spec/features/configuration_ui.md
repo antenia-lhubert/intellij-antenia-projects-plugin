@@ -28,11 +28,12 @@ Global database credentials should contain only a username and password; connect
 Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
 
 Users should be able to manage reusable database connection profiles in `Settings > Tools > Antenia > Database > Database Profiles`.
-A profile contains a unique name, host, port, optional database, optional advanced `databaseEdi`, and the global-credential override section.
+A profile contains a unique name, a supported database project type, host, port, optional database, the advanced database values supported by that project type, and the global-credential override section.
+Profiles are scoped to exactly one database project type (`Core` or `GED`). Project profile selectors show profiles for the detected project type only. Profiles persisted before project types were introduced are migrated to Core.
 The override decision is stored with the profile. Profile override credentials are stored in IntelliJ Password Safe and never in plugin state XML.
 Profile names are unique case-insensitively. Custom profiles are stored globally and can be created, edited, deleted, and cloned.
 No profiles are provided by the plugin. When the tool window first opens, the selector displays a user profile when its connection details match the project, and remains empty when none matches. Profile inference is not repeated while fields are edited or when the configuration is reloaded.
-The selector contains a `New profile...` entry. Selecting it asks for a non-empty, case-insensitively unique name, creates and selects the profile with the preferred default host, port 3306, empty database fields, and global credentials. After selecting or matching a profile, connection fields can be edited while that profile remains selected. A Save action explicitly saves edited values back to the profile; project edits never implicitly save the profile.
+The selector contains a `New profile...` entry. Selecting it asks for a non-empty, case-insensitively unique name, creates and selects a profile for the current project type with the preferred default host, port 3306, empty database fields, project-type defaults for advanced fields, and global credentials. After selecting or matching a profile, connection fields can be edited while that profile remains selected. A Save action explicitly saves edited values back to the profile; project edits never implicitly save the profile.
 
 The following immutable hosts are always provided as suggestions:
 - `antenia-dev-mysql5.leaderinfo.com`
@@ -61,11 +62,15 @@ DB Credentials form should have:
 - host (free input so that user can put in an unknown host)
 - port (defaults to 3306)
 - database
-- an optional advanced `databaseEdi` field for project types that support it
+- a collapsible advanced database section containing only the fields supported by the detected project type
 - have the option to override global credentials
 - disabling the override should retain the project credentials securely so they are restored when the override is enabled again
 
-Selecting a profile copies all its connection details into the project form, including empty database and `databaseEdi` values.
+Core advanced database fields are `databaseEdi`, `driver`, `hibernate.show_sql`, `hibernate.dialect`, `checkoutTimeout`, `maxIdleTime`, `maxConnectionAge`, `acquireIncrement`, `maxStatements`, `propertyCycle`, `unreturnedConnectionTimeout`, `autoCommitOnClose`, `preferredTestQuery`, `switchToManual`, `minPoolSizeNormal`, `maxPoolSizeNormal`, `minPoolSizeSpring`, `maxPoolSizeSpring`, `SGBD`, and `liquibaseEnabled`.
+GED advanced database fields are `jdbc.driverClassName`, `hibernate.show_sql`, and `hibernate.dialect`.
+No `WebAction*` key is a database profile field. `webapps`, `environnement`, `CouperRequetes`, and `PropertyCycle` also remain outside the database form.
+
+Selecting a profile copies all its connection and advanced details into the project form, including empty values.
 The form infers a user profile from matching connection details only when the tool window is first opened. Directly editing a selected profile keeps it selected so the edited values can be saved.
 Selecting or resetting a profile applies its credential override decision and securely stored override credentials. Automatically matching a profile marks it active without overwriting the project's current credential section; differences can then be saved to or reset from the profile.
 An active profile's Save and Reset actions compare all connection and credential fields to the profile's latest saved state. Reset restores that saved state.
@@ -78,6 +83,7 @@ Keys used in those forms should not show as key value in the table.
 Instead, the table should have a special line for each form (e.g. `db credentials` and `environment` lines)
 Those lines cannot be created or deleted, but can be moved.
 Keys in a group should always be grouped in the config file too.
-If they are not, they should be regrouped/moved to the first key of the group.
+If database keys are not grouped, their ordered connection, credential, Hibernate, pool, and other database subgroups should be moved to the first database key. Only known subgroup headings and blank separators bounded by database-owned lines move with the database block. Arbitrary comments and blank lines before a subgroup remain independent so reordering does not absorb user-authored layout.
+The bundled templates use the same subgroup order as the result of regrouping.
 
 

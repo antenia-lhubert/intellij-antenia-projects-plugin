@@ -5,6 +5,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import fr.antenia.project.NeoProjectType
 
 @Service(Service.Level.APP)
 @State(name = "AnteniaDatabaseConnectionProfiles", storages = [Storage("antenia.xml")])
@@ -29,7 +30,7 @@ class DatabaseConnectionProfileSettings :
         settingsState.profiles = DatabaseConnectionProfiles.customOnly(profiles).map { profile ->
             val id = profile.id.takeIf { it.isNotBlank() && ids.add(it) }
                 ?: DatabaseConnectionProfiles.newId().also(ids::add)
-            profile.copy(id = id)
+            DatabaseConnectionProfiles.normalized(profile.copy(id = id))
         }
             .map(::StoredProfile)
             .toMutableList()
@@ -63,29 +64,52 @@ class DatabaseConnectionProfileSettings :
         var host: String = ""
         var port: Int = 3306
         var database: String = ""
+        // Kept only to migrate profiles written before advanced values were generalized.
         var databaseEdi: String = ""
         var overrideGlobalCredentials: Boolean = false
         var id: String = ""
+        var projectType: String = ""
+        var advancedValues: MutableList<StoredAdvancedValue> = mutableListOf()
 
         constructor(profile: DatabaseConnectionProfile) : this() {
             name = profile.name
             host = profile.host
             port = profile.port
             database = profile.database
-            databaseEdi = profile.databaseEdi
             overrideGlobalCredentials = profile.overrideGlobalCredentials
             id = profile.id
+            projectType = profile.projectType.name
+            advancedValues = profile.advancedValues.map { (key, value) -> StoredAdvancedValue(key, value) }.toMutableList()
         }
 
-        fun toProfile(): DatabaseConnectionProfile = DatabaseConnectionProfile(
-            name = name,
-            host = host,
-            port = port,
-            database = database,
-            overrideGlobalCredentials = overrideGlobalCredentials,
-            id = id,
-            databaseEdi = databaseEdi,
-        )
+        fun toProfile(): DatabaseConnectionProfile {
+            val storedType = runCatching { NeoProjectType.valueOf(projectType) }.getOrNull()
+            val type = storedType ?: NeoProjectType.CORE
+            val values = advancedValues.associate { it.key to it.value }.toMutableMap()
+            if (databaseEdi.isNotEmpty()) values.putIfAbsent("databaseEdi", databaseEdi)
+            return DatabaseConnectionProfiles.normalized(
+                DatabaseConnectionProfile(
+                    name = name,
+                    host = host,
+                    port = port,
+                    database = database,
+                    overrideGlobalCredentials = overrideGlobalCredentials,
+                    id = id,
+                    projectType = type,
+                    advancedValues = values,
+                ),
+            )
+        }
+    }
+
+    class StoredAdvancedValue() {
+        var key: String = ""
+        var value: String = ""
+
+        constructor(key: String, value: String) : this() {
+            this.key = key
+            this.value = value
+        }
     }
 
     companion object {

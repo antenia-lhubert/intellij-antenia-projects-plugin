@@ -9,10 +9,11 @@ Version names retain the snapshot identifiers used by the repository.
 
 ### Added
 
-- Add optional advanced `databaseEdi` values to reusable database profiles and the Core project database form.
+- Add project-type-specific database profiles with relevant Core and GED advanced settings for drivers, Hibernate, connection pools, SGBD, and Liquibase, while keeping WebAction properties separate.
 
 ### Fixed
 
+- Preserve known database subgroup headings and internal separators without absorbing arbitrary preceding comments or blank lines during regrouping.
 - Correct database-profile switching, one-time inference, explicit saving, saved-state reset, and action enablement in the Neo Configuration tool window.
 - Replace the database-profile Save As action with a `New profile...` selector entry that creates a named profile with default values.
 - Keep Neo Configuration controls visible when the tool window's `Show Toolbar` option is disabled.

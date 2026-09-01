@@ -45,14 +45,12 @@ Each project type have specific configurations at runtime:
 url=jdbc\:mysql\:///?autoReconnect\=true
 database=
 databaseEdi=
-environnement=DEV
 
 usernameNovanet=
 passwordNovanet=
 usernameSpring=
 passwordSpring=
 driver=com.mysql.jdbc.Driver
-webapps=novanet
 
 # PARAMETRES SPECIFIQUE A HIBERNATE
 hibernate.show_sql=false
@@ -78,6 +76,14 @@ maxPoolSizeNormal=30
 minPoolSizeSpring=2
 maxPoolSizeSpring=5
 
+# AUTRES PARAMETRES BASE DE DONNEES
+SGBD=MySQL
+liquibaseEnabled=non
+
+# PARAMETRES APPLICATION
+environnement=DEV
+webapps=novanet
+
 # AUTRES PARAMETRES
 boiteEnvoiBRB=E_MAIL
 CouperRequetes=oui
@@ -98,12 +104,10 @@ MessageRefuDroit="Vous n'avez pas les droits !"
 PropertyCycle=3
 smtp=postfix.leaderinfo.com
 serveurws=localhost:8443
-SGBD=MySQL
 SiteRetour=http\://www.leaderinfo.com
 urlext=https\://localhost:8443/novanet/
 
 saltValue=KuRJtEPlba
-liquibaseEnabled=non
 
 GlobalSSOLoginRedirectAuto=non
 GlobalSSOLoginCreateAuto=oui
@@ -205,10 +209,11 @@ jdbc.driverClassName=com.mysql.jdbc.Driver
 
 jdbc.url=jdbc\:mysql\:///?autoReconnect\=true
 
-# Identifiants base de donnée
+# Identifiants base de donnï¿½e
 jdbc.username=
 jdbc.password=
 
+# PARAMETRES SPECIFIQUE A HIBERNATE
 hibernate.show_sql=false
 hibernate.dialect=org.hibernate.dialect.MySQLDialect
 
@@ -218,7 +223,7 @@ webapps=ged
 smtp=postfix.leaderinfo.com
 dossierRoot=C:/tools/applications/ged/data/
 
-# Temps des sessions REST (exprimé en milliseconde, 0=infini)
+# Temps des sessions REST (exprimï¿½ en milliseconde, 0=infini)
 rest.sessionTime=600000
 
 # Sert a annoter des PDF directement depuis la GED.
@@ -231,7 +236,7 @@ pspdfkitKey=
 <!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
 
 <log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" threshold="all" debug="true">
-	<!-- Paramètrage du fichier de logs GED_WARN, contenant les erreurs de G.E.D.-->
+	<!-- Paramï¿½trage du fichier de logs GED_WARN, contenant les erreurs de G.E.D.-->
 	<appender name="fichier" class="org.apache.log4j.DailyRollingFileAppender">
 	 	<param name="file" value="${dirGed}/logs/ged/GED_WARN"/>
 		<param name="DatePattern" value="'_'yyyy-MM-dd'.LOG'"/>
@@ -239,7 +244,7 @@ pspdfkitKey=
 			<param name="ConversionPattern" value="[GED] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n" />
 		</layout>
 	</appender>
-	<!-- Précise que les logger vont sur la console -->
+	<!-- Prï¿½cise que les logger vont sur la console -->
 	<appender name="stdout" class="org.apache.log4j.ConsoleAppender">
 		<layout class="org.apache.log4j.PatternLayout">
 			<param name="ConversionPattern" value="[GED] %d{dd/MM/yyyy HH:mm:ss} [%p] %c ==> ligne: %L ==> %m%n" />
@@ -264,7 +269,7 @@ urlWebService=https://localhost:8443/novanet/
 login=
 password=
 
-# Style spécifique
+# Style spï¿½cifique
 cssSocieteUser=
 
 # Identifiants captcha google

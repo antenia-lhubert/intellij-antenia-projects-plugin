@@ -57,14 +57,11 @@ object GlobalDatabaseCredentialsSynchronizer {
             logger.info("Global database credentials already synchronized for '${project.name}'")
             return
         }
-        updates.forEach(document::setValue)
-        document.regroup(buildSet {
-            add(keys.url)
-            keys.database?.let(::add)
-            keys.databaseEdi?.let(::add)
-            addAll(keys.usernames)
-            addAll(keys.passwords)
-        })
+        updates.forEach { (key, value) ->
+            val group = requireNotNull(keys.layoutGroups.firstOrNull { key in it.keys })
+            document.setValueInGroup(key, value, group.keys)
+        }
+        document.regroupPreservingLayout(keys.layoutGroups)
         ConfigurationFiles.write(project, path, document)
         logger.info(
             "Synchronized global database credentials for '${project.name}': " +

@@ -61,6 +61,7 @@ import fr.antenia.database.DatabaseConnectionProfileSettings
 import fr.antenia.database.DatabaseConnectionProfilesConfigurable
 import fr.antenia.database.DatabaseHostsConfigurable
 import fr.antenia.database.DatabaseProfileFields
+import fr.antenia.database.DatabaseAdvancedFields
 import fr.antenia.database.DatabaseEditorAction
 import fr.antenia.database.MysqlConnection
 import fr.antenia.project.DatabaseKeys
@@ -487,7 +488,7 @@ class ConfigurationPanel(
 
     private fun load(newDocument: OrderedProperties) {
         val selectedRow = table.selectedRow
-        schema.database?.let { newDocument.regroup(databaseKeys(it)) }
+        schema.database?.let { newDocument.regroupPreservingLayout(it.layoutGroups) }
         schema.environmentKey?.let { newDocument.regroup(setOf(it)) }
         document = newDocument
         model.load(document)
@@ -594,14 +595,6 @@ class ConfigurationPanel(
         )
     }
 
-    private fun databaseKeys(keys: DatabaseKeys): Set<String> = buildSet {
-        add(keys.url)
-        keys.database?.let(::add)
-        keys.databaseEdi?.let(::add)
-        addAll(keys.usernames)
-        addAll(keys.passwords)
-    }
-
     private inner class DatabaseForm(private val keys: DatabaseKeys) {
         private val emptyProfile = DatabaseConnectionProfile("", "", 3306, "")
         private val newProfile = DatabaseConnectionProfile(message("configuration.database.profile.new"), "", 3306, "")
@@ -636,7 +629,7 @@ class ConfigurationPanel(
         private val hostSelector = profileFields.hostSelector
         private val port = profileFields.portField
         private val database = profileFields.databaseField
-        private val databaseEdi = profileFields.databaseEdiField
+        private val advancedFields = DatabaseAdvancedFields(keys.advanced)
         private val saveProfileAction = DatabaseEditorAction(
             message("configuration.database.profile.save"),
             message("configuration.database.profile.save.tooltip"),
@@ -679,7 +672,7 @@ class ConfigurationPanel(
                 resetProfileAction,
                 manageProfilesAction,
             ),
-            showDatabaseEdi = keys.databaseEdi != null,
+            advancedComponent = advancedFields.component,
         ).apply { border = JBUI.Borders.empty(12) }
 
         init {
@@ -740,7 +733,8 @@ class ConfigurationPanel(
                 updateQuickActions()
                 update()
             }
-            listOf(port, database, databaseEdi).forEach { it.document.onChange(::connectionChanged) }
+            listOf(port, database).forEach { it.document.onChange(::connectionChanged) }
+            advancedFields.fields.values.forEach { it.document.onChange(::connectionChanged) }
             username.document.onChange(::profileValueChanged)
             password.document.onChange(::profileValueChanged)
         }
@@ -756,7 +750,7 @@ class ConfigurationPanel(
             })
             port.text = (parsed?.port ?: 3306).toString()
             database.text = keys.database?.let(document::value)?.takeIf { it.isNotEmpty() } ?: parsed?.database.orEmpty()
-            databaseEdi.text = keys.databaseEdi?.let(document::value).orEmpty()
+            advancedFields.setValues(keys.advanced.associate { it.key to document.value(it.key).orEmpty() })
             override.isSelected = state.overrideGlobalCredentials
             username.text = keys.usernames.firstNotNullOfOrNull(document::value).orEmpty()
             password.text = keys.passwords.firstNotNullOfOrNull(document::value).orEmpty()
@@ -780,7 +774,10 @@ class ConfigurationPanel(
             val wasLoading = loading
             val selectedId = activeProfileId.takeIf { preserveSelection }
             loading = true
-            val profiles = DatabaseConnectionProfileSettings.getInstance().profiles()
+            val profiles = DatabaseConnectionProfiles.applicable(
+                DatabaseConnectionProfileSettings.getInstance().profiles(),
+                neoProject.type,
+            )
             profile.model = DefaultComboBoxModel((listOf(emptyProfile) + profiles + newProfile).toTypedArray())
             val preserved = profiles.firstOrNull { it.id == selectedId }
             profile.selectedItem = preserved ?: emptyProfile
@@ -862,7 +859,8 @@ class ConfigurationPanel(
                 port = 3306,
                 database = "",
                 id = DatabaseConnectionProfiles.newId(),
-                databaseEdi = "",
+                projectType = neoProject.type,
+                advancedValues = keys.advancedDefaults,
             )
             settings.replaceProfiles(settings.profiles() + created)
             activeProfileId = created.id
@@ -916,10 +914,10 @@ class ConfigurationPanel(
         private fun matchingProfile(profiles: List<DatabaseConnectionProfile>): DatabaseConnectionProfile? =
             DatabaseConnectionProfiles.matching(
                 profiles.filterNot { it === emptyProfile || it === newProfile },
+                neoProject.type,
                 currentHost(),
                 port.text.toIntOrNull() ?: 0,
                 database.text,
-                databaseEdi.text,
             )
 
         private fun currentHost(): String = hostSelector.host()
@@ -934,7 +932,12 @@ class ConfigurationPanel(
                 database.text,
                 overrideGlobalCredentials = override.isSelected,
                 id = selectedProfile()?.id.orEmpty(),
-                databaseEdi = databaseEdi.text,
+                projectType = selectedProfile()?.projectType ?: neoProject.type,
+                advancedValues = if (selectedProfile()?.projectType == neoProject.type) {
+                    advancedFields.values()
+                } else {
+                    emptyMap()
+                },
             )
         }
 
@@ -951,7 +954,9 @@ class ConfigurationPanel(
             hostSelector.setHost(selected.host)
             port.text = selected.port.toString()
             database.text = selected.database
-            databaseEdi.text = selected.databaseEdi
+            if (selected.projectType == neoProject.type) {
+                advancedFields.setValues(keys.advancedDefaults + selected.advancedValues)
+            }
             override.isSelected = selected.overrideGlobalCredentials
             state.overrideGlobalCredentials = selected.overrideGlobalCredentials
             profileDraftCredentials = savedProfileCredentials(selected)
@@ -1009,15 +1014,21 @@ class ConfigurationPanel(
             val selectedHost = currentHost()
             val selectedPort = port.text.toIntOrNull()?.takeIf { it in 1..65535 } ?: return
             val selectedDatabase = database.text
-            document.setValue(keys.url, MysqlConnection.build(selectedHost, selectedPort, selectedDatabase, query))
-            keys.database?.let { document.setValue(it, selectedDatabase) }
-            keys.databaseEdi?.let { document.setValue(it, databaseEdi.text) }
-            keys.usernames.forEach { document.setValue(it, username.text) }
+            setDatabaseValue(keys.url, MysqlConnection.build(selectedHost, selectedPort, selectedDatabase, query))
+            keys.database?.let { setDatabaseValue(it, selectedDatabase) }
+            advancedFields.values().forEach(::setDatabaseValue)
+            keys.usernames.forEach { setDatabaseValue(it, username.text) }
             val passwordValue = password.password.concatToString()
-            keys.passwords.forEach { document.setValue(it, passwordValue) }
+            keys.passwords.forEach { setDatabaseValue(it, passwordValue) }
+            document.regroupPreservingLayout(keys.layoutGroups)
             if (override.isSelected) saveOverride()
             refreshTablePreservingSelection()
             persist()
+        }
+
+        private fun setDatabaseValue(key: String, value: String) {
+            val group = requireNotNull(keys.layoutGroups.firstOrNull { key in it.keys })
+            document.setValueInGroup(key, value, group.keys)
         }
     }
 
@@ -1127,6 +1138,9 @@ private class ConfigurationTableModel(
             is LogicalRow.Entry -> if (column == 0) item.line.key = value.toString() else item.line.value = value.toString()
             is LogicalRow.Comment -> if (column == 1) replaceLine(item.line, PropertyLine.Comment("# ${value.toString()}"))
             else -> return
+        }
+        if (column == 0 && rows[row] is LogicalRow.Entry) {
+            schema.database?.let { document.regroupPreservingLayout(it.layoutGroups) }
         }
         load(document)
         changed()
@@ -1247,20 +1261,13 @@ private class ConfigurationTableModel(
     }
 
     private fun logicalRows(document: OrderedProperties): MutableList<LogicalRow> {
-        val databaseKeys = schema.database?.let { keys -> buildSet {
-            add(keys.url)
-            keys.database?.let(::add)
-            keys.databaseEdi?.let(::add)
-            addAll(keys.usernames)
-            addAll(keys.passwords)
-        } }.orEmpty()
-        val databaseLines = document.lines.filter { it is PropertyLine.Entry && it.key in databaseKeys }
+        val databaseLines = schema.database?.let { document.groupedLines(it.layoutGroups) }.orEmpty()
         val environmentLines = document.lines.filter { it is PropertyLine.Entry && it.key == schema.environmentKey }
         var databaseAdded = false
         var environmentAdded = false
         return document.lines.mapNotNullTo(mutableListOf()) { line ->
             when {
-                line is PropertyLine.Entry && line.key in databaseKeys -> if (!databaseAdded) LogicalRow.Database(databaseLines).also { databaseAdded = true } else null
+                databaseLines.any { it === line } -> if (!databaseAdded) LogicalRow.Database(databaseLines).also { databaseAdded = true } else null
                 line is PropertyLine.Entry && line.key == schema.environmentKey -> if (!environmentAdded) LogicalRow.Environment(environmentLines).also { environmentAdded = true } else null
                 line is PropertyLine.Entry -> LogicalRow.Entry(line)
                 line is PropertyLine.Comment -> LogicalRow.Comment(line)

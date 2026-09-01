@@ -1,5 +1,7 @@
 package fr.antenia.database
 
+import fr.antenia.project.NeoProjectType
+import fr.antenia.project.NeoSchema
 import java.util.Locale
 import java.util.UUID
 
@@ -10,7 +12,8 @@ data class DatabaseConnectionProfile(
     val database: String,
     val overrideGlobalCredentials: Boolean = false,
     val id: String = "",
-    val databaseEdi: String = "",
+    val projectType: NeoProjectType = NeoProjectType.CORE,
+    val advancedValues: Map<String, String> = emptyMap(),
 )
 
 object DatabaseConnectionProfiles {
@@ -26,21 +29,36 @@ object DatabaseConnectionProfiles {
 
     fun newId(): String = UUID.randomUUID().toString()
 
+    fun defaultAdvancedValues(type: NeoProjectType): Map<String, String> =
+        NeoSchema.forType(type).database?.advancedDefaults.orEmpty()
+
+    fun applicable(profiles: List<DatabaseConnectionProfile>, type: NeoProjectType): List<DatabaseConnectionProfile> =
+        profiles.filter { it.projectType == type }
+
+    fun normalized(profile: DatabaseConnectionProfile): DatabaseConnectionProfile {
+        val type = profile.projectType.takeIf { it == NeoProjectType.GED } ?: NeoProjectType.CORE
+        val defaults = defaultAdvancedValues(type)
+        return profile.copy(
+            projectType = type,
+            advancedValues = defaults + profile.advancedValues.filterKeys(defaults::containsKey),
+        )
+    }
+
     fun matching(
         profiles: List<DatabaseConnectionProfile>,
+        type: NeoProjectType,
         host: String,
         port: Int,
         database: String,
-        databaseEdi: String = "",
     ): DatabaseConnectionProfile? = profiles.withIndex()
         .filter { (_, profile) ->
-            profile.host.equals(host, ignoreCase = true) && profile.port == port &&
-                (profile.database.isEmpty() || profile.database == database) &&
-                (profile.databaseEdi.isEmpty() || profile.databaseEdi == databaseEdi)
+            profile.projectType == type &&
+                profile.host.equals(host, ignoreCase = true) && profile.port == port &&
+                (profile.database.isEmpty() || profile.database == database)
         }
         .maxWithOrNull(
             compareBy<IndexedValue<DatabaseConnectionProfile>> {
-                (if (it.value.database.isNotEmpty()) 1 else 0) + (if (it.value.databaseEdi.isNotEmpty()) 1 else 0)
+                if (it.value.database.isNotEmpty()) 1 else 0
             }.thenByDescending { it.index },
         )
         ?.value
