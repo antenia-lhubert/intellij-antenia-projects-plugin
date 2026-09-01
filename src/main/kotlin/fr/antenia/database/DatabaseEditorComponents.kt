@@ -230,7 +230,17 @@ internal class DatabaseEditorAction(
     icon: Icon,
     private val action: () -> Unit,
 ) : DumbAwareAction(text, tooltip, icon) {
+    private val stateRefreshers = mutableListOf<() -> Unit>()
     var enabled: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            stateRefreshers.forEach { it() }
+        }
+
+    fun refreshStateWith(refresher: () -> Unit) {
+        stateRefreshers.add(refresher)
+    }
 
     override fun actionPerformed(event: AnActionEvent) = action()
 
@@ -243,13 +253,15 @@ internal class DatabaseEditorAction(
 
 internal fun boundedActionField(field: JComponent, vararg actions: DatabaseEditorAction): JComponent {
     val toolbar = actions.takeIf { it.isNotEmpty() }?.let {
-        ActionManager.getInstance().createActionToolbar(
+        val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLWINDOW_TITLE,
             DefaultActionGroup(*it),
             true,
         ).apply {
             targetComponent = field
-        }.component
+        }
+        actions.forEach { action -> action.refreshStateWith { actionToolbar.updateActionsAsync() } }
+        actionToolbar.component
     }
     return object : JPanel(BorderLayout()) {
         override fun getPreferredSize(): Dimension {

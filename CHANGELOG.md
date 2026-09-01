@@ -13,6 +13,8 @@ Version names retain the snapshot identifiers used by the repository.
 
 ### Fixed
 
+- Correct database-profile switching, one-time inference, explicit saving, saved-state reset, and action enablement in the Neo Configuration tool window.
+- Replace the database-profile Save As action with a `New profile...` selector entry that creates a named profile with default values.
 - Keep Neo Configuration controls visible when the tool window's `Show Toolbar` option is disabled.
 - Keep the Neo Configuration footer limited to the project type and a clickable configuration-file path, with errors shown as notifications.
 

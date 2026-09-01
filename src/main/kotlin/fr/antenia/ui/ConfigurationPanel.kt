@@ -604,6 +604,7 @@ class ConfigurationPanel(
 
     private inner class DatabaseForm(private val keys: DatabaseKeys) {
         private val emptyProfile = DatabaseConnectionProfile("", "", 3306, "")
+        private val newProfile = DatabaseConnectionProfile(message("configuration.database.profile.new"), "", 3306, "")
         private val profile = ComboBox<DatabaseConnectionProfile>().apply {
             prototypeDisplayValue = DatabaseConnectionProfile("Database profile", "", 3306, "")
             renderer = object : DefaultListCellRenderer() {
@@ -642,21 +643,14 @@ class ConfigurationPanel(
             AllIcons.Actions.MenuSaveall,
         ) {
             saveSelectedProfile()
-        }
-        private val saveAsProfileAction = DatabaseEditorAction(
-            message("configuration.database.profile.save.as"),
-            message("configuration.database.profile.save.as.tooltip"),
-            AllIcons.Actions.AddFile,
-        ) {
-            saveAsProfile()
-        }
+        }.apply { enabled = false }
         private val resetProfileAction = DatabaseEditorAction(
             message("configuration.database.profile.reset"),
             message("configuration.database.profile.reset.tooltip"),
             AllIcons.Actions.Rollback,
         ) {
             resetSelectedProfile()
-        }
+        }.apply { enabled = false }
         private val manageProfilesAction = DatabaseEditorAction(
             message("configuration.database.profiles.manage"),
             message("configuration.database.profiles.manage.tooltip"),
@@ -671,14 +665,10 @@ class ConfigurationPanel(
         private val username = profileFields.usernameField
         private val password = profileFields.passwordField
         private var loading = false
+        private var inferProfileOnLoad = true
+        private var activeProfileId: String? = null
         private var query = "?autoReconnect=true"
-        private var profileBaseline: DatabaseConnectionProfile? = null
-        private var profileCredentialsBaseline: DatabaseCredentials? = null
         private var profileDraftCredentials: DatabaseCredentials? = null
-        private var profileDatabaseTextBaseline = ""
-        private var profileStoredDatabaseBaseline: String? = null
-        private var profileDatabaseEdiTextBaseline = ""
-        private var profileStoredDatabaseEdiBaseline: String? = null
 
         val component: JComponent = profileFields.createComponent(
             message("configuration.database.profile"),
@@ -686,7 +676,6 @@ class ConfigurationPanel(
             title = message("configuration.database.title"),
             primaryActions = listOf(
                 saveProfileAction,
-                saveAsProfileAction,
                 resetProfileAction,
                 manageProfilesAction,
             ),
@@ -698,17 +687,22 @@ class ConfigurationPanel(
             profile.addActionListener {
                 if (loading) return@addActionListener
                 val selected = profile.selectedItem as? DatabaseConnectionProfile ?: return@addActionListener
-                if (selected === emptyProfile) {
-                    clearProfileBaseline()
-                    updateQuickActions()
-                    return@addActionListener
+                when (selected) {
+                    emptyProfile -> {
+                        activeProfileId = null
+                        profileDraftCredentials = null
+                        updateQuickActions()
+                    }
+                    newProfile -> createProfile()
+                    else -> {
+                        activeProfileId = selected.id
+                        loading = true
+                        applyProfile(selected)
+                        loading = false
+                        updateQuickActions()
+                        update()
+                    }
                 }
-                loading = true
-                applyProfile(selected)
-                loading = false
-                captureProfileBaseline(selected)
-                updateQuickActions()
-                update()
             }
             profile.addPopupMenuListener(object : PopupMenuListener {
                 override fun popupMenuWillBecomeVisible(event: PopupMenuEvent) = refreshProfiles()
@@ -753,7 +747,7 @@ class ConfigurationPanel(
 
         fun load() {
             loading = true
-            refreshProfiles(preserveSelection = false)
+            refreshProfiles(preserveSelection = !inferProfileOnLoad)
             refreshHosts()
             val parsed = MysqlConnection.parse(document.value(keys.url).orEmpty())
             query = parsed?.query ?: "?autoReconnect=true"
@@ -768,29 +762,31 @@ class ConfigurationPanel(
             password.text = keys.passwords.firstNotNullOfOrNull(document::value).orEmpty()
             if (override.isSelected) saveOverride()
             updateEnabled()
-            if (parsed == null) {
-                profile.selectedItem = emptyProfile
-                clearProfileBaseline()
-            } else {
+            if (inferProfileOnLoad && parsed != null) {
                 selectMatchingProfile()
+            } else if (selectedProfile() != null) {
+                profileDraftCredentials = if (override.isSelected) {
+                    currentCredentials()
+                } else {
+                    savedProfileCredentials(requireNotNull(selectedProfile()))
+                }
             }
+            inferProfileOnLoad = false
             loading = false
             updateQuickActions()
         }
 
         private fun refreshProfiles(preserveSelection: Boolean = true) {
             val wasLoading = loading
-            val selectedName = selectedProfile()?.name.takeIf { preserveSelection }
+            val selectedId = activeProfileId.takeIf { preserveSelection }
             loading = true
             val profiles = DatabaseConnectionProfileSettings.getInstance().profiles()
-            profile.model = DefaultComboBoxModel((listOf(emptyProfile) + profiles).toTypedArray())
-            val preserved = profiles.firstOrNull { it.name == selectedName }
-            val selection = preserved ?: matchingProfile(profiles).takeIf { preserveSelection }
-            profile.selectedItem = selection ?: emptyProfile
-            if (profile.selectedItem === emptyProfile) {
-                clearProfileBaseline()
-            } else if (preserved == null && selection != null) {
-                captureInferredProfileBaseline(selection)
+            profile.model = DefaultComboBoxModel((listOf(emptyProfile) + profiles + newProfile).toTypedArray())
+            val preserved = profiles.firstOrNull { it.id == selectedId }
+            profile.selectedItem = preserved ?: emptyProfile
+            activeProfileId = preserved?.id
+            if (preserved == null) {
+                profileDraftCredentials = null
             }
             loading = wasLoading
             updateQuickActions()
@@ -803,11 +799,6 @@ class ConfigurationPanel(
 
         private fun connectionChanged() {
             if (loading) return
-            if (selectedProfile() == null) {
-                loading = true
-                selectMatchingProfile()
-                loading = false
-            }
             updateQuickActions()
             update()
         }
@@ -828,21 +819,17 @@ class ConfigurationPanel(
                 if (it.id == selected.id) updated else it
             })
             refreshProfiles()
-            captureProfileBaseline(updated)
             updateQuickActions()
         }
 
-        private fun saveAsProfile() {
-            if (currentProfile("") == null) return
-            val settings = DatabaseConnectionProfileSettings.getInstance()
-            val profiles = settings.profiles()
-            val selected = selectedProfile()
-            val suggestedName = uniqueProfileName(selected?.name?.let { message("database.profiles.copy", it) }
-                ?: database.text.ifBlank { currentHost() })
+        private fun createProfile() {
+            val previousProfileId = activeProfileId
             val validator = object : InputValidatorEx {
                 override fun getErrorText(inputString: String?): String? = when {
                     inputString.isNullOrBlank() -> message("database.profiles.validation.name")
-                    profiles.any { it.name.equals(inputString.trim(), ignoreCase = true) } ->
+                    DatabaseConnectionProfileSettings.getInstance().profiles().any {
+                        it.name.equals(inputString.trim(), ignoreCase = true)
+                    } ->
                         message("database.profiles.validation.unique")
                     else -> null
                 }
@@ -852,63 +839,83 @@ class ConfigurationPanel(
             }
             val name = Messages.showInputDialog(
                 project,
-                message("configuration.database.profile.save.as.prompt"),
-                message("configuration.database.profile.save.as.title"),
+                message("configuration.database.profile.new.prompt"),
+                message("configuration.database.profile.new.title"),
                 Messages.getQuestionIcon(),
-                suggestedName,
+                uniqueProfileName(message("database.profiles.new")),
                 validator,
-            )?.trim() ?: return
-            val created = currentProfile(name) ?: return
-            val profileWithId = created.copy(id = DatabaseConnectionProfiles.newId())
-            val createdCredentials = currentProfileCredentials()
-            createdCredentials?.let { ProfileDatabaseCredentials.save(profileWithId.id, it) }
-            settings.replaceProfiles(profiles + profileWithId)
-            refreshProfiles(preserveSelection = false)
+            )?.trim()
+            if (name == null) {
+                activeProfileId = previousProfileId
+                refreshProfiles()
+                return
+            }
+            val settings = DatabaseConnectionProfileSettings.getInstance()
+            if (settings.profiles().any { it.name.equals(name, ignoreCase = true) }) {
+                activeProfileId = previousProfileId
+                refreshProfiles()
+                return
+            }
+            val created = DatabaseConnectionProfile(
+                name = name,
+                host = DatabaseConnectionProfiles.preferredDefaultHost(neoProject.javaVersion),
+                port = 3306,
+                database = "",
+                id = DatabaseConnectionProfiles.newId(),
+                databaseEdi = "",
+            )
+            settings.replaceProfiles(settings.profiles() + created)
+            activeProfileId = created.id
+            refreshProfiles()
+            val selected = selectedProfile() ?: return
             loading = true
-            profile.selectedItem = (0 until profile.itemCount).map(profile::getItemAt).first { it.name == name }
+            applyProfile(selected)
             loading = false
-            profileDraftCredentials = createdCredentials
-            captureProfileBaseline(profileWithId)
             updateQuickActions()
+            update()
         }
 
         private fun resetSelectedProfile() {
             val selected = selectedProfile() ?: return
             val saved = DatabaseConnectionProfileSettings.getInstance().profiles().firstOrNull { it.id == selected.id } ?: return
-            val resetDatabase = if (saved.database.isEmpty()) profileDatabaseTextBaseline else saved.database
-            val resetDatabaseEdi = if (saved.databaseEdi.isEmpty()) profileDatabaseEdiTextBaseline else saved.databaseEdi
             loading = true
             profile.selectedItem = saved
             applyProfile(saved)
-            database.text = resetDatabase
-            databaseEdi.text = resetDatabaseEdi
             loading = false
-            captureProfileBaseline(saved)
             updateQuickActions()
             update()
         }
 
         private fun updateQuickActions() {
             val selected = selectedProfile()
-            val current = currentProfile(selected?.name.orEmpty())
-            val changed = current != profileBaseline || currentProfileCredentials() != profileCredentialsBaseline
-            saveProfileAction.enabled = selected != null && current != null && changed
-            saveAsProfileAction.enabled = current != null
-            resetProfileAction.enabled = selected != null && changed
+            val saved = selected?.let { selectedProfile ->
+                DatabaseConnectionProfileSettings.getInstance().profiles().firstOrNull { it.id == selectedProfile.id }
+            }
+            val current = saved?.let { currentProfile(it.name) }
+            val changed = saved != null && current != null && (
+                current != saved || currentProfileCredentials() != savedProfileCredentials(saved)
+            )
+            saveProfileAction.enabled = changed
+            resetProfileAction.enabled = changed
         }
 
         private fun selectedProfile(): DatabaseConnectionProfile? =
-            (profile.selectedItem as? DatabaseConnectionProfile)?.takeUnless { it === emptyProfile }
+            (profile.selectedItem as? DatabaseConnectionProfile)?.takeUnless {
+                it === emptyProfile || it === newProfile
+            }
 
         private fun selectMatchingProfile() {
             val matching = matchingProfile((0 until profile.itemCount).map(profile::getItemAt))
             profile.selectedItem = matching ?: emptyProfile
-            if (matching != null) captureInferredProfileBaseline(matching) else clearProfileBaseline()
+            activeProfileId = matching?.id
+            profileDraftCredentials = matching?.let {
+                if (override.isSelected) currentCredentials() else savedProfileCredentials(it)
+            }
         }
 
         private fun matchingProfile(profiles: List<DatabaseConnectionProfile>): DatabaseConnectionProfile? =
             DatabaseConnectionProfiles.matching(
-                profiles.filterNot { it === emptyProfile },
+                profiles.filterNot { it === emptyProfile || it === newProfile },
                 currentHost(),
                 port.text.toIntOrNull() ?: 0,
                 database.text,
@@ -924,10 +931,10 @@ class ConfigurationPanel(
                 name,
                 selectedHost,
                 selectedPort,
-                currentProfileDatabase(),
+                database.text,
                 overrideGlobalCredentials = override.isSelected,
                 id = selectedProfile()?.id.orEmpty(),
-                databaseEdi = currentProfileDatabaseEdi(),
+                databaseEdi = databaseEdi.text,
             )
         }
 
@@ -937,14 +944,17 @@ class ConfigurationPanel(
         private fun currentProfileCredentials(): DatabaseCredentials? =
             if (selectedProfile() != null) profileDraftCredentials else currentCredentials().takeIf { override.isSelected }
 
+        private fun savedProfileCredentials(profile: DatabaseConnectionProfile): DatabaseCredentials =
+            ProfileDatabaseCredentials.credentials(profile.id) ?: DatabaseCredentials("", "")
+
         private fun applyProfile(selected: DatabaseConnectionProfile) {
             hostSelector.setHost(selected.host)
             port.text = selected.port.toString()
-            if (selected.database.isNotEmpty()) database.text = selected.database
-            if (selected.databaseEdi.isNotEmpty()) databaseEdi.text = selected.databaseEdi
+            database.text = selected.database
+            databaseEdi.text = selected.databaseEdi
             override.isSelected = selected.overrideGlobalCredentials
             state.overrideGlobalCredentials = selected.overrideGlobalCredentials
-            profileDraftCredentials = ProfileDatabaseCredentials.credentials(selected.id) ?: DatabaseCredentials("", "")
+            profileDraftCredentials = savedProfileCredentials(selected)
             if (selected.overrideGlobalCredentials) {
                 val credentials = requireNotNull(profileDraftCredentials)
                 username.text = credentials.username
@@ -953,52 +963,6 @@ class ConfigurationPanel(
                 loadGlobal()
             }
             updateEnabled()
-        }
-
-        private fun currentProfileDatabase(): String =
-            if (profileStoredDatabaseBaseline?.isEmpty() == true && database.text == profileDatabaseTextBaseline) {
-                ""
-            } else {
-                database.text
-            }
-
-        private fun currentProfileDatabaseEdi(): String =
-            if (profileStoredDatabaseEdiBaseline?.isEmpty() == true &&
-                databaseEdi.text == profileDatabaseEdiTextBaseline
-            ) {
-                ""
-            } else {
-                databaseEdi.text
-            }
-
-        private fun captureProfileBaseline(profile: DatabaseConnectionProfile) {
-            profileStoredDatabaseBaseline = profile.database
-            profileDatabaseTextBaseline = database.text
-            profileStoredDatabaseEdiBaseline = profile.databaseEdi
-            profileDatabaseEdiTextBaseline = databaseEdi.text
-            profileBaseline = currentProfile(profile.name)
-            profileCredentialsBaseline = profileDraftCredentials
-        }
-
-        private fun captureInferredProfileBaseline(profile: DatabaseConnectionProfile) {
-            profileStoredDatabaseBaseline = profile.database
-            profileDatabaseTextBaseline = database.text
-            profileStoredDatabaseEdiBaseline = profile.databaseEdi
-            profileDatabaseEdiTextBaseline = databaseEdi.text
-            profileBaseline = profile
-            val savedCredentials = ProfileDatabaseCredentials.credentials(profile.id) ?: DatabaseCredentials("", "")
-            profileCredentialsBaseline = savedCredentials
-            profileDraftCredentials = if (override.isSelected) currentCredentials() else savedCredentials
-        }
-
-        private fun clearProfileBaseline() {
-            profileBaseline = null
-            profileCredentialsBaseline = null
-            profileDraftCredentials = null
-            profileStoredDatabaseBaseline = null
-            profileDatabaseTextBaseline = database.text
-            profileStoredDatabaseEdiBaseline = null
-            profileDatabaseEdiTextBaseline = databaseEdi.text
         }
 
         private fun uniqueProfileName(baseName: String): String {

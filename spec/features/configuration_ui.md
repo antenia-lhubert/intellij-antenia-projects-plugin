@@ -31,8 +31,8 @@ Users should be able to manage reusable database connection profiles in `Setting
 A profile contains a unique name, host, port, optional database, optional advanced `databaseEdi`, and the global-credential override section.
 The override decision is stored with the profile. Profile override credentials are stored in IntelliJ Password Safe and never in plugin state XML.
 Profile names are unique case-insensitively. Custom profiles are stored globally and can be created, edited, deleted, and cloned.
-No profiles are provided by the plugin. The selector automatically displays a user profile when its connection details match the project, and remains empty when none matches.
-After selecting or matching a profile, connection fields can be edited while that profile remains selected. Quick actions allow saving the edited values back to the profile or saving them as a new profile.
+No profiles are provided by the plugin. When the tool window first opens, the selector displays a user profile when its connection details match the project, and remains empty when none matches. Profile inference is not repeated while fields are edited or when the configuration is reloaded.
+The selector contains a `New profile...` entry. Selecting it asks for a non-empty, case-insensitively unique name, creates and selects the profile with the preferred default host, port 3306, empty database fields, and global credentials. After selecting or matching a profile, connection fields can be edited while that profile remains selected. A Save action explicitly saves edited values back to the profile; project edits never implicitly save the profile.
 
 The following immutable hosts are always provided as suggestions:
 - `antenia-dev-mysql5.leaderinfo.com`
@@ -65,10 +65,10 @@ DB Credentials form should have:
 - have the option to override global credentials
 - disabling the override should retain the project credentials securely so they are restored when the override is enabled again
 
-Selecting a profile copies its connection details into the project form. A profile without a database or `databaseEdi` keeps the corresponding current project value.
-The form infers a user profile from matching connection details. Directly editing a selected profile keeps it selected so the edited values can be saved.
+Selecting a profile copies all its connection details into the project form, including empty database and `databaseEdi` values.
+The form infers a user profile from matching connection details only when the tool window is first opened. Directly editing a selected profile keeps it selected so the edited values can be saved.
 Selecting or resetting a profile applies its credential override decision and securely stored override credentials. Automatically matching a profile marks it active without overwriting the project's current credential section; differences can then be saved to or reset from the profile.
-An edited active profile has a reset action that restores all connection and credential fields from the saved profile.
+An active profile's Save and Reset actions compare all connection and credential fields to the profile's latest saved state. Reset restores that saved state.
 Applying or editing a profile must not silently change projects that previously used its values; the user explicitly selects it to apply it again.
 
 Env form should have:
