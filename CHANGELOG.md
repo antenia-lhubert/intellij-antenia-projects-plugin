@@ -7,6 +7,8 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+## [1.0.9-SNAPSHOT] - 2026-09-08
+
 ### Added
 
 - Add project-type-specific database profiles with relevant Core and GED advanced settings for drivers, Hibernate, connection pools, SGBD, and Liquibase, while keeping WebAction properties separate.
@@ -144,7 +146,8 @@ Version names retain the snapshot identifiers used by the repository.
 - Create the initial IntelliJ Platform plugin scaffold.
 - Add the generated demonstration tool window and build, test, and verification configurations.
 
-[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.8-SNAPSHOT...HEAD
+[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.9-SNAPSHOT...HEAD
+[1.0.9-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.8-SNAPSHOT...v1.0.9-SNAPSHOT
 [1.0.8-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.7-SNAPSHOT...v1.0.8-SNAPSHOT
 [1.0.7-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.6-SNAPSHOT...v1.0.7-SNAPSHOT
 [1.0.6-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.5-SNAPSHOT...v1.0.6-SNAPSHOT
