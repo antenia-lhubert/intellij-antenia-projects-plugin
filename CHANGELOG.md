@@ -7,11 +7,13 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+## [1.0.10-SNAPSHOT] - 2026-09-08
+
 ### Fixed
 
 - Parse and coerce the real Maven project version with semver4j, including current two-component versions, and use it to preselect the correct development database host, including MySQL 5 for versions 1.1 and 1.2; retain isolated legacy inference for POMs without a version tag.
 
-## [1.0.9-SNAPSHOT] - 2026-09-08
+## [1.0.9-SNAPSHOT] - 2026-09-01
 
 ### Added
 
@@ -150,7 +152,8 @@ Version names retain the snapshot identifiers used by the repository.
 - Create the initial IntelliJ Platform plugin scaffold.
 - Add the generated demonstration tool window and build, test, and verification configurations.
 
-[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.9-SNAPSHOT...HEAD
+[Unreleased]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.10-SNAPSHOT...HEAD
+[1.0.10-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.9-SNAPSHOT...v1.0.10-SNAPSHOT
 [1.0.9-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.8-SNAPSHOT...v1.0.9-SNAPSHOT
 [1.0.8-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.7-SNAPSHOT...v1.0.8-SNAPSHOT
 [1.0.7-SNAPSHOT]: https://github.com/antenia-lhubert/intellij-antenia-projects-plugin/compare/v1.0.6-SNAPSHOT...v1.0.7-SNAPSHOT
