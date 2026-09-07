@@ -106,6 +106,19 @@ class NeoProjectDetectorTest {
     }
 
     @Test
+    fun `uses legacy inference for the legacy snapshot version`() {
+        listOf(8 to "1.4.0", 17 to "1.5.0", 25 to "1.6.0").forEach { (javaVersion, expectedVersion) ->
+            val root = temporaryFolder.newFolder("legacy-snapshot-$javaVersion").toPath()
+            root.resolve("pom.xml").toFile().writeText(
+                "<project><artifactId>webapp-ged</artifactId><version>1.0-SNAPSHOT</version>" +
+                    "<properties><java.version>$javaVersion</java.version></properties></project>",
+            )
+
+            assertEquals(expectedVersion, NeoProjectDetector.detect(root)!!.version.toString())
+        }
+    }
+
+    @Test
     fun `rejects a project version that semver4j cannot coerce`() {
         val invalid = temporaryFolder.newFolder("invalid-version").toPath()
         invalid.resolve("pom.xml").toFile().writeText(

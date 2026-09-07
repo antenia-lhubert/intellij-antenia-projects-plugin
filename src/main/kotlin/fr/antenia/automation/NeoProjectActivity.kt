@@ -21,6 +21,7 @@ import fr.antenia.project.NeoProjectDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.idea.maven.project.MavenProjectsManager
+import java.nio.file.Files
 
 class NeoProjectActivity : ProjectActivity {
     private val logger = Logger.getInstance(NeoProjectActivity::class.java)
@@ -62,8 +63,14 @@ class NeoProjectActivity : ProjectActivity {
             try {
                 ToolWindowManager.getInstance(project).getToolWindow("Neo Configuration")?.setAvailable(true)
                 logger.info("Enabled Neo Configuration tool window for '${project.name}'")
+                val configurationWasMissing = Files.notExists(ConfigurationFiles.propertyPath(project, neoProject.type))
                 ConfigurationFiles.ensureCreated(project, neoProject.type)
-                GlobalDatabaseCredentialsSynchronizer.update(project, GlobalDatabaseSettings.getInstance().credentials())
+                val globalCredentials = GlobalDatabaseSettings.getInstance().credentials()
+                if (configurationWasMissing) {
+                    GlobalDatabaseCredentialsSynchronizer.restore(project, globalCredentials)
+                } else {
+                    GlobalDatabaseCredentialsSynchronizer.update(project, globalCredentials)
+                }
                 DatabaseProfileSynchronizer.update(project, neoProject)
                 configureProject(project, neoProject)
                 NeoRunConfigurationManager.configure(project, neoProject)

@@ -12,6 +12,8 @@ Version names retain the snapshot identifiers used by the repository.
 ### Fixed
 
 - Parse and coerce the real Maven project version with semver4j, including current two-component versions, and use it to preselect the correct development database host, including MySQL 5 for versions 1.1 and 1.2; retain isolated legacy inference for POMs without a version tag.
+- Restore the active global or project-specific database credentials when automatic setup recreates a deleted project properties file.
+- Treat the legacy `1.0-SNAPSHOT` project version as a request for Java-based version inference.
 
 ## [1.0.9-SNAPSHOT] - 2026-09-01
 

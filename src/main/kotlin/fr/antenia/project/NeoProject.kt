@@ -93,7 +93,7 @@ object NeoProjectDetector {
             val rawJavaVersion = javaProperties.firstNotNullOfOrNull { propertyValues[it] }?.let { resolveProperty(it, propertyValues) }
             val javaVersion = rawJavaVersion?.let(::parseJavaVersion) ?: 8
             val rawProjectVersion = root.childText("version")?.let { resolveProperty(it, propertyValues) }
-            val version = if (rawProjectVersion == null) {
+            val version = if (rawProjectVersion == null || rawProjectVersion == LEGACY_PROJECT_VERSION) {
                 LegacyProjectVersionInference.infer(javaVersion)
             } else {
                 Semver.coerce(rawProjectVersion)
@@ -140,6 +140,7 @@ object NeoProjectDetector {
 
     private val TOMCAT_10_MIN_VERSION = Semver("1.5.0-0")
     private val TOMCAT_11_MIN_VERSION = Semver("1.6.0-0")
+    private const val LEGACY_PROJECT_VERSION = "1.0-SNAPSHOT"
 }
 
 private fun org.w3c.dom.Element.child(name: String): org.w3c.dom.Element? =

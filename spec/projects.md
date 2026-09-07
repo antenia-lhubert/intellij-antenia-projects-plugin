@@ -21,13 +21,13 @@ Each of those projects have versions:
 
 The root `pom.xml` specifies the real project version. The plugin should parse it into an `Semver` object and retain that typed version; it must not represent a project version as a range. Current two-component versions such as `1.4` are coerced to `1.4.0`.
 
-As a temporary legacy fallback only when the root `pom.xml` has no version tag, infer a semantic project version from Java:
+As a temporary legacy fallback when the root `pom.xml` has no version tag or its resolved version is the legacy `1.0-SNAPSHOT` sentinel, infer a semantic project version from Java:
 
 - Java 8-16: 1.4.0
 - Java 17-24: 1.5.0
 - Java 25+: 1.6.0
 
-This fallback should be isolated in a legacy component so it can be deleted when all projects specify their version. A present POM version always takes precedence and is never replaced by inference.
+This fallback should be isolated in a legacy component so it can be deleted when all projects specify their real version. Any present POM version other than `1.0-SNAPSHOT` always takes precedence and is never replaced by inference.
 
 Java version should be detected independently of the project version.
 They can be deduced from the java version in the pom (in priority order: `java.version`, `jdk.version`, `version.compiler`, `maven.compiler.release`, `maven.compiler.target`, `maven.compiler.source`).

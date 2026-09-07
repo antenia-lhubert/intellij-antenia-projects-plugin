@@ -39,6 +39,25 @@ object GlobalDatabaseCredentialsSynchronizer {
             logger.info("Global database credential synchronization skipped for '${project.name}': project override is enabled")
             return
         }
+        synchronize(project, credentials, "global")
+    }
+
+    fun restore(project: Project, globalCredentials: DatabaseCredentials) {
+        if (project.isDisposed) {
+            logger.debug("Database credential restoration skipped for '${project.name}': project is disposed")
+            return
+        }
+        val state = ProjectConfigurationState.getInstance(project)
+        val credentials = restoredDatabaseCredentials(
+            state.overrideGlobalCredentials,
+            ProjectDatabaseCredentials.credentials(project),
+            globalCredentials,
+        )
+        val source = if (state.overrideGlobalCredentials) "project override" else "global"
+        synchronize(project, credentials, source)
+    }
+
+    private fun synchronize(project: Project, credentials: DatabaseCredentials, source: String) {
         val neoProject = NeoProjectDetector.detect(project)
         if (neoProject == null) {
             logger.debug("Global database credential synchronization skipped for '${project.name}': unsupported project")
@@ -54,7 +73,7 @@ object GlobalDatabaseCredentialsSynchronizer {
         val updates = keys.usernames.associateWith { credentials.username } +
             keys.passwords.associateWith { credentials.password }
         if (updates.all { (key, value) -> document.value(key) == value }) {
-            logger.info("Global database credentials already synchronized for '${project.name}'")
+            logger.info("$source database credentials already synchronized for '${project.name}'")
             return
         }
         updates.forEach { (key, value) ->
@@ -64,8 +83,18 @@ object GlobalDatabaseCredentialsSynchronizer {
         document.regroupPreservingLayout(keys.layoutGroups)
         ConfigurationFiles.write(project, path, document)
         logger.info(
-            "Synchronized global database credentials for '${project.name}': " +
+            "Synchronized $source database credentials for '${project.name}': " +
                 "usernamePresent=${credentials.username.isNotEmpty()}, passwordPresent=${credentials.password.isNotEmpty()}, keys=${updates.keys.joinToString()}",
         )
     }
+}
+
+internal fun restoredDatabaseCredentials(
+    overrideGlobalCredentials: Boolean,
+    projectCredentials: DatabaseCredentials?,
+    globalCredentials: DatabaseCredentials,
+): DatabaseCredentials = if (overrideGlobalCredentials) {
+    projectCredentials ?: DatabaseCredentials("", "")
+} else {
+    globalCredentials
 }

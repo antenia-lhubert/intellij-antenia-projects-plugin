@@ -26,6 +26,7 @@ User should be able to configure global database credentials that are safely sto
 (global configuration should be done in a separate UI in `Settings > Tools > Antenia > Database > Credentials`)
 Global database credentials should contain only a username and password; connection details remain project-specific.
 Changes to global credentials should immediately update every open project that does not override them, and synchronize other projects when they are opened later.
+When automatic setup recreates a missing project properties file, it should restore the active global or project-override credentials from Password Safe.
 
 Users should be able to manage reusable database connection profiles in `Settings > Tools > Antenia > Database > Database Profiles`.
 A profile contains a unique name, a supported database project type, host, port, optional database, the advanced database values supported by that project type, and the global-credential override section.
