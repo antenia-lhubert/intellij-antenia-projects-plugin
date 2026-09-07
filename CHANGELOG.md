@@ -7,6 +7,10 @@ Version names retain the snapshot identifiers used by the repository.
 
 ## [Unreleased]
 
+### Fixed
+
+- Parse and coerce the real Maven project version with semver4j, including current two-component versions, and use it to preselect the correct development database host, including MySQL 5 for versions 1.1 and 1.2; retain isolated legacy inference for POMs without a version tag.
+
 ## [1.0.9-SNAPSHOT] - 2026-09-08
 
 ### Added

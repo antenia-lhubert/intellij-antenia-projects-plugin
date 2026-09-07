@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.semver4j.Semver
 
 class DatabaseConnectionProfileSettingsTest {
     @Test
@@ -17,9 +18,35 @@ class DatabaseConnectionProfileSettingsTest {
             ),
             DatabaseConnectionProfiles.defaultHosts(),
         )
-        assertEquals("antenia-dev-mysql8.leaderinfo.com", DatabaseConnectionProfiles.preferredDefaultHost(8))
-        assertEquals("mysql8-4-5-dev.antenia.com", DatabaseConnectionProfiles.preferredDefaultHost(17))
         assertTrue(DatabaseConnectionProfileSettings().profiles().isEmpty())
+    }
+
+    @Test
+    fun `selects the preferred host from the project version`() {
+        assertEquals(
+            "antenia-dev-mysql5.leaderinfo.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.1.0")),
+        )
+        assertEquals(
+            "antenia-dev-mysql5.leaderinfo.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.2.9")),
+        )
+        assertEquals(
+            "antenia-dev-mysql8.leaderinfo.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.3.0-SNAPSHOT")),
+        )
+        assertEquals(
+            "antenia-dev-mysql8.leaderinfo.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.4.9")),
+        )
+        assertEquals(
+            "mysql8-4-5-dev.antenia.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.5.0")),
+        )
+        assertEquals(
+            "mysql8-4-5-dev.antenia.com",
+            DatabaseConnectionProfiles.preferredDefaultHost(version("1.6.0")),
+        )
     }
 
     @Test
@@ -227,4 +254,6 @@ class DatabaseConnectionProfileSettingsTest {
             },
         )
     }
+
+    private fun version(value: String): Semver = Semver(value)
 }

@@ -746,7 +746,7 @@ class ConfigurationPanel(
             val parsed = MysqlConnection.parse(document.value(keys.url).orEmpty())
             query = parsed?.query ?: "?autoReconnect=true"
             hostSelector.setHost(parsed?.host.orEmpty().ifEmpty {
-                DatabaseConnectionProfiles.preferredDefaultHost(neoProject.javaVersion)
+                DatabaseConnectionProfiles.preferredDefaultHost(neoProject.version)
             })
             port.text = (parsed?.port ?: 3306).toString()
             database.text = keys.database?.let(document::value)?.takeIf { it.isNotEmpty() } ?: parsed?.database.orEmpty()
@@ -855,7 +855,7 @@ class ConfigurationPanel(
             }
             val created = DatabaseConnectionProfile(
                 name = name,
-                host = DatabaseConnectionProfiles.preferredDefaultHost(neoProject.javaVersion),
+                host = DatabaseConnectionProfiles.preferredDefaultHost(neoProject.version),
                 port = 3306,
                 database = "",
                 id = DatabaseConnectionProfiles.newId(),

@@ -40,6 +40,11 @@ The following immutable hosts are always provided as suggestions:
 - `antenia-dev-mysql8.leaderinfo.com`
 - `mysql8-4-5-dev.antenia.com`
 
+The preferred default host is preselected from the detected semantic project version:
+- 1.1 through 1.2: `antenia-dev-mysql5.leaderinfo.com`
+- 1.3 through 1.4: `antenia-dev-mysql8.leaderinfo.com`
+- 1.5 and later: `mysql8-4-5-dev.antenia.com`
+
 Users can enter any host and save a host that is not yet in the suggestion list for reuse across projects.
 Hosts can be managed in `Settings > Tools > Antenia > Database > Database Hosts`. Provided hosts are read-only and cannot be deleted; custom hosts can be created, edited, and deleted.
 The database-profile settings page and project database form should reuse the same connection, host, and credential controls so validation and host actions behave consistently.

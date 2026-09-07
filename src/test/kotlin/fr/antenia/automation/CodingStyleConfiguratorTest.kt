@@ -89,7 +89,9 @@ class CodingStyleConfiguratorTest {
     }
 
     private fun writePom(root: Path, artifactId: String) {
-        root.resolve("pom.xml").toFile().writeText("<project><artifactId>$artifactId</artifactId></project>")
+        root.resolve("pom.xml").toFile().writeText(
+            "<project><artifactId>$artifactId</artifactId><version>1.5.0</version></project>",
+        )
     }
 
     private fun assertPackage(entry: PackageEntry, name: String) {

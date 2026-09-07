@@ -1,5 +1,7 @@
 [versions]
 junit = "4.13.2"
+semver = "6.0.0"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
+semver = { module = "org.semver4j:semver4j", version.ref = "semver" }

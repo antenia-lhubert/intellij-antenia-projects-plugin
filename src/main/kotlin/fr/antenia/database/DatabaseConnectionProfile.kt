@@ -4,6 +4,7 @@ import fr.antenia.project.NeoProjectType
 import fr.antenia.project.NeoSchema
 import java.util.Locale
 import java.util.UUID
+import org.semver4j.Semver
 
 data class DatabaseConnectionProfile(
     val name: String,
@@ -17,6 +18,8 @@ data class DatabaseConnectionProfile(
 )
 
 object DatabaseConnectionProfiles {
+    private val mysql8MinVersion = Semver("1.3.0-0")
+    private val currentMysqlMinVersion = Semver("1.5.0-0")
     private val providedHosts = listOf(
         "antenia-dev-mysql5.leaderinfo.com",
         "antenia-dev-mysql8.leaderinfo.com",
@@ -25,7 +28,13 @@ object DatabaseConnectionProfiles {
 
     fun defaultHosts(): List<String> = providedHosts
 
-    fun preferredDefaultHost(javaVersion: Int): String = providedHosts[if (javaVersion >= 17) 2 else 1]
+    fun preferredDefaultHost(projectVersion: Semver): String {
+        return providedHosts[when {
+            projectVersion < mysql8MinVersion -> 0
+            projectVersion < currentMysqlMinVersion -> 1
+            else -> 2
+        }]
+    }
 
     fun newId(): String = UUID.randomUUID().toString()
 

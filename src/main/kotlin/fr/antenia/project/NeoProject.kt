@@ -8,6 +8,7 @@ import fr.antenia.notifications.AnteniaNotifications
 import fr.antenia.MyMessageBundle.message
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import org.semver4j.Semver
 
 enum class NeoProjectType(
     private val displayNameKey: String,
@@ -28,7 +29,7 @@ enum class NeoProjectType(
     val explodedArtifactName: String get() = "$artifactId:war exploded"
 }
 
-data class NeoProject(val type: NeoProjectType, val version: String, val javaVersion: Int, val hasReact: Boolean) {
+data class NeoProject(val type: NeoProjectType, val version: Semver, val javaVersion: Int, val hasReact: Boolean) {
     val tomcatVersion: String get() = NeoProjectDetector.tomcatVersion(version)
 }
 
@@ -92,10 +93,12 @@ object NeoProjectDetector {
             val rawJavaVersion = javaProperties.firstNotNullOfOrNull { propertyValues[it] }?.let { resolveProperty(it, propertyValues) }
             val javaVersion = rawJavaVersion?.let(::parseJavaVersion) ?: 8
             val rawProjectVersion = root.childText("version")?.let { resolveProperty(it, propertyValues) }
-            val version = rawProjectVersion
-                ?.takeUnless { it == UNDETECTED_PROJECT_VERSION }
-                ?.takeIf { PROJECT_VERSION_PATTERN.matches(it) }
-                ?: inferProjectVersion(javaVersion)
+            val version = if (rawProjectVersion == null) {
+                LegacyProjectVersionInference.infer(javaVersion)
+            } else {
+                Semver.coerce(rawProjectVersion)
+                    ?: error("Root pom.xml declares an invalid semantic project version: $rawProjectVersion")
+            }
             val reactDirectory = when (type) {
                 NeoProjectType.CORE -> "novanet-react"
                 else -> null
@@ -118,23 +121,12 @@ object NeoProjectDetector {
         return normalized.takeWhile(Char::isDigit).toIntOrNull() ?: 8
     }
 
-    internal fun tomcatVersion(projectVersion: String): String {
-        val match = PROJECT_VERSION_PATTERN.matchEntire(projectVersion)
-            ?: error("Unsupported Neo project version: $projectVersion")
-        val major = match.groupValues[1].toInt()
-        val minor = match.groupValues[2].toInt()
+    internal fun tomcatVersion(projectVersion: Semver): String {
         return when {
-            major > 1 || major == 1 && minor >= 6 -> "11"
-            major == 1 && minor >= 5 -> "10.1"
+            projectVersion >= TOMCAT_11_MIN_VERSION -> "11"
+            projectVersion >= TOMCAT_10_MIN_VERSION -> "10.1"
             else -> "9"
         }
-    }
-
-    // Temporary gap fill for projects that still expose the legacy placeholder version.
-    private fun inferProjectVersion(javaVersion: Int): String = when {
-        javaVersion >= 25 -> "1.6+"
-        javaVersion >= 17 -> "1.5"
-        else -> "1.1-1.4"
     }
 
     private fun resolveProperty(value: String, properties: Map<String, String>): String {
@@ -146,8 +138,8 @@ object NeoProjectDetector {
         return resolved
     }
 
-    private const val UNDETECTED_PROJECT_VERSION = "1.0-SNAPSHOT"
-    private val PROJECT_VERSION_PATTERN = Regex("^(\\d+)\\.(\\d+)(?:[.+-].*)?$")
+    private val TOMCAT_10_MIN_VERSION = Semver("1.5.0-0")
+    private val TOMCAT_11_MIN_VERSION = Semver("1.6.0-0")
 }
 
 private fun org.w3c.dom.Element.child(name: String): org.w3c.dom.Element? =
